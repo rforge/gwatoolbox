@@ -9,7 +9,7 @@
 	\item{snps}{The name of an input file with SNPs.}
 	\item{output}{The name of an output file.}
 	\item{append}{If true, then writes all columns from an input file into a result file.}
-	\item{multicolumn}{}
+	\item{multicolumn}{No description.}
 }
 \note{Under development.}
 \author{Daniel Taliun, Christian Fuchsberger, Cristian Pattaro}
