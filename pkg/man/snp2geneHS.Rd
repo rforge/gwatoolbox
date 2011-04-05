@@ -4,12 +4,12 @@
 \description{Annotates SNPs to genes assuming hotspots.}
 \usage{snp2geneHS(chromosome, snps, ld, hotspots, genes, prefix)}
 \arguments{
-	\item{chromosome}{}
-	\item{snps}{}
-	\item{ld}{}
-	\item{hotspots}{}
-	\item{genes}{}
-	\item{prefix}{}
+	\item{chromosome}{No description.}
+	\item{snps}{No description.}
+	\item{ld}{No description.}
+	\item{hotspots}{No description.}
+	\item{genes}{No description.}
+	\item{prefix}{No description.}
 }
 \note{Under development.}
 \author{Daniel Taliun, Christian Fuchsberger, Cristian Pattaro}
