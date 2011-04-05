@@ -1717,6 +1717,14 @@ SEXP ANOT_gene_to_snp_by_name(SEXP genes_file, SEXP genesdb_file, SEXP snps_file
 
 }
 
+/*
+ *	Description:
+ *		Entry point for a stand-alone application.
+ *		During compilation needs to be linked to R and GSL libraries.
+ *	Arguments:
+ *		argv[1]	--	METAL-like script file name
+ */
+
 int main(int args, char** argv) {
 	vector<File*>* files = NULL;
 	vector<File*>::iterator file_it;
