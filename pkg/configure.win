@@ -19,8 +19,8 @@
 
 if test -z "${GSL_LIBS}" -o -z "${GSL_INCL}"; then
 	echo "The GWAtoolbox requires GNU Scientific Library (GSL)."
-    echo "You need to set the environmental variables GSL_LIB and GSL_INCL."
-    echo "The GSL_LIB points to the directory containing libraries for the GSL."
+    echo "You need to set the environmental variables GSL_LIBS and GSL_INCL."
+    echo "The GSL_LIBS points to the directory containing libraries for the GSL."
     echo "The GSL_INCL points to the directory containing headers for the GSL."
     exit 1
 fi
