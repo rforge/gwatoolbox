@@ -2711,8 +2711,8 @@ if test "${GSL_CONFIG}" != ""; then
     GSL_CFLAGS=`${GSL_CONFIG} --cflags`
     GSL_LIBS=`${GSL_CONFIG} --libs`
 else
-    { { $as_echo "$as_me:$LINENO: error: gsl-config not found, is GSL installed?" >&5
-$as_echo "$as_me: error: gsl-config not found, is GSL installed?" >&2;}
+    { { $as_echo "$as_me:$LINENO: error: gsl-config was not found, check if GSL is installed." >&5
+$as_echo "$as_me: error: gsl-config was not found, check if GSL is installed." >&2;}
    { (exit 1); exit 1; }; }
 fi
 
