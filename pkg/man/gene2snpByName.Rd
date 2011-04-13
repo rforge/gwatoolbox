@@ -4,7 +4,7 @@
 \description{Annotates genes to SNPs.}
 \usage{gene2snpByName(names, genes, snps, output, append, multicolumn)}
 \arguments{
-	\item{names}{}
+	\item{names}{No description.}
 	\item{genes}{The name of an input file with genes.}
 	\item{snps}{The name of an input file with SNPs.}
 	\item{output}{The name of an output file.}
