@@ -3,6 +3,7 @@
 \usepackage{makeidx}
 \usepackage{latexsym}
 \usepackage[pdftex,colorlinks]{hyperref}
+\usepackage[utf8]{inputenc}
 
 \title{GWAtoolbox \\An R package for the fast processing of data from Genome-Wide Association Studies}
 \author{Christian Fuchsberger \and Daniel Taliun \and Cristian Pattaro}
