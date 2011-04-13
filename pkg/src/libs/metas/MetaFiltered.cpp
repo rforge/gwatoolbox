@@ -151,7 +151,7 @@ void MetaFiltered::finalize() throw (MetaException, PlotException) {
 				double* chi_data = NULL;
 				double lambda = 0;
 
-/*				if ((chi_data = (double*)malloc(n * sizeof(double))) == NULL) {
+				if ((chi_data = (double*)malloc(n * sizeof(double))) == NULL) {
 					throw MetaException(0, "MetaFiltered", "finalize()", "chi_data", n * sizeof(double));
 				}
 
@@ -162,7 +162,7 @@ void MetaFiltered::finalize() throw (MetaException, PlotException) {
 				qsort(chi_data, n, sizeof(double), MetaNumeric::compare);
 				lambda = gsl_stats_median_from_sorted_data(chi_data, 1, n) / Rf_qchisq(0.5, 1, 0, 0);
 				free(chi_data);
-				chi_data = NULL;*/
+				chi_data = NULL;
 
 				qqplot = Qqplot::create(get_description(), get_color(), data, lambda, n);
 			}
