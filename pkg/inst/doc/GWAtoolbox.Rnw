@@ -3,7 +3,7 @@
 \usepackage{makeidx}
 \usepackage{latexsym}
 \usepackage[pdftex,colorlinks]{hyperref}
-\usepackage[utf8]{inputenc}
+% \usepackage[utf8]{inputenc}
 
 \title{GWAtoolbox \\An R package for the fast processing of data from Genome-Wide Association Studies}
 \author{Christian Fuchsberger \and Daniel Taliun \and Cristian Pattaro}
@@ -628,7 +628,7 @@ cat(list.files(pattern="^(res.*)|(.*(html|png))"), sep="\n")
 \begin{thebibliography}{9}
 
 \bibitem{Willer10}
-Cristen J. Willer , Yun Li , and Gonçalo R. Abecasis. (2010) \textbf{METAL: fast and efficient meta-analysis of genomewide association scans}. Bioinformatics 26: 2190-2191.
+Cristen J. Willer , Yun Li , and Gonï¿½alo R. Abecasis. (2010) \textbf{METAL: fast and efficient meta-analysis of genomewide association scans}. Bioinformatics 26: 2190-2191.
 
 \bibitem{Bakker08}
 Paul I.W. de Bakker , Manuel A.R. Ferreira , Xiaoming Jia , Benjamin M. Neale , Soumya Raychaudhuri , and Benjamin F. Voight (2008) \textbf{Practical aspects of imputation-driven meta-analysis of genome-wide association studies}. Hum. Mol. Genet. 17: R122-R128.
