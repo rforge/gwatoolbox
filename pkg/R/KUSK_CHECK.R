@@ -33,7 +33,7 @@ kusk_check <- function(summary_file, worst, plot) {
 		stop("Argument 'plot' must be a logical.")
 	}
 
-       	filelist <- scan(summary_file, what="character", quiet=TRUE)
+    filelist <- scan(summary_file, what="character", quiet=TRUE)
 	f <- length(filelist)
 	if (f <= 0) {
 		stop("File '", summary_file, "' is empty.\n")
@@ -66,7 +66,7 @@ kusk_check <- function(summary_file, worst, plot) {
 			else if (worst[j] == 50) {
 				data[i, 2*j] <- x$STD_EFFECT_0.5[9]
 				data[i, 2*j + 1] <- x$STD_EFFECT_0.5[10] 
-	                }
+	        }
 		}
 	}
 
@@ -82,7 +82,7 @@ kusk_check <- function(summary_file, worst, plot) {
 		}
 
 		for (i in 1:w) {
-			plot(data[, 2 * i], data[, 2 * i + 1], type = "n", xlim = c(-max.sk, max.sk), ylim = c(-max.ku, max.ku), main = paste(worst[i], "%", sep=""), xlab = "skewness", ylab = "kurtosis")
+			plot(data[, 2 * i], data[, 2 * i + 1], type = "n", xlim = c(-max.sk, max.sk), ylim = c(-max.ku, max.ku), main = paste(worst[i], "%", sep=""), xlab = "Skewness", ylab = "Kurtosis")
 			abline(h=0, v=0, lwd = 2)
 			points(data[, 2 * i], data[, 2 * i + 1], bg=c("darkred", "red", "pink", "orange", "yellow")[i], pch = 22, cex = 1)		               			
 		}
