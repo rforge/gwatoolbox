@@ -19,8 +19,8 @@
 
 #include "../../include/metas/MetaImplausibleStrictAdjusted.h"
 
-MetaImplausibleStrictAdjusted::MetaImplausibleStrictAdjusted(double less, double greater, double threshold) throw (MetaException):
-	MetaImplausibleStrict(less, greater), threshold(threshold) {
+MetaImplausibleStrictAdjusted::MetaImplausibleStrictAdjusted(double less, double greater, double threshold, int heap_size) throw (MetaException):
+	MetaImplausibleStrict(less, greater, heap_size), threshold(threshold) {
 
 }
 
