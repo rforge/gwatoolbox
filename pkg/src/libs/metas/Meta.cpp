@@ -19,7 +19,7 @@
 
 #include "../../include/metas/Meta.h"
 
-const int Meta::HEAP_SIZE = /*2600000*/2800000;
+const int Meta::HEAP_SIZE = 2800000;
 const int Meta::HEAP_INCREMENT = 100000;
 
 Meta::Meta():
