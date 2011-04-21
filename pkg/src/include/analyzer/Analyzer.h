@@ -72,6 +72,7 @@ private:
 	char* beg;
 
 	void detect_separators(File& file) throw (AnalyzerException);
+	void estimate_lines_count(File& file) throw (AnalyzerException);
 	void process_header(File& file, ifstream& ifile_stream) throw (ifstream::failure, AnalyzerException, MetaException);
 	void initialize_filters_and_crosstables(File& file) throw (FileException, PlotException, MetaException);
 	void initialize_dependencies(File& file);
@@ -134,7 +135,8 @@ public:
 	static const char* SEMICOLON;
 	static const char* TAB;
 	static const char* MISSED;
-	static const int CHECK_ROW_COUNT;
+	static const int CHECK_ROW_COUNT_FOR_SEPARATOR;
+	static const int CHECK_ROW_COUNT_FOR_SIZE;
 	static const int SEPARATORS_SIZE;
 	static const char separators[];
 
@@ -203,8 +205,6 @@ public:
 	int process_data(File& file) throw (AnalyzerException, FileException, PlotException, MetaException);
 	vector<Boxplot*>* create_common_boxplots(vector<File*>& files) throw (AnalyzerException, FileException, PlotException);
 	vector<Plot*>* create_plots(File& file) throw (FileException, PlotException);
-
-	int get_line_number(File& file) throw (AnalyzerException);
 
 	void print_result_txt(File& file) throw (AnalyzerException, FileException);
 	void print_result_csv(File& file) throw (AnalyzerException, FileException);
