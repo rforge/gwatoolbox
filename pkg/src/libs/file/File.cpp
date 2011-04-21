@@ -22,14 +22,14 @@
 File::File():
 	file_name(NULL), file_path(NULL), full_path(NULL), abbreviation(NULL),
 	output_prefix(NULL), output_name(NULL), file_separator('\0'), case_sensitive(false),
-	columns(compare), properties(compare), thresholds(compare) {
+	estimated_lines_count(0), columns(compare), properties(compare), thresholds(compare) {
 
 }
 
 File::File(const char* path, char file_sep) throw (FileException):
 	file_name(NULL), file_path(NULL), full_path(NULL), abbreviation(NULL),
 	output_prefix(NULL), output_name(NULL), file_separator(file_sep), case_sensitive(false),
-	columns(compare), properties(compare), thresholds(compare) {
+	estimated_lines_count(0), columns(compare), properties(compare), thresholds(compare) {
 
 	if (path == NULL) {
 		throw FileException(1, NULL, "File(const char* path)", "path", "NULL");
@@ -45,7 +45,7 @@ File::File(const char* path, char file_sep) throw (FileException):
 File::File(const char* path, File& file, char file_sep) throw (FileException):
 	file_name(NULL), file_path(NULL), full_path(NULL), abbreviation(NULL),
 	output_prefix(NULL), output_name(NULL), file_separator(file_sep), case_sensitive(false),
-	columns(compare), properties(compare), thresholds(compare) {
+	estimated_lines_count(0), columns(compare), properties(compare), thresholds(compare) {
 
 	if (path == NULL) {
 		throw FileException(1, NULL, "File(const char* path, File& file)", "path", "NULL");
@@ -874,12 +874,20 @@ char* File::get_file_path(const char* path, char file_sep) throw (FileException)
 	return file_path;
 }
 
+void File::set_estimated_lines_count(int estimated_lines_count) {
+	this->estimated_lines_count = estimated_lines_count;
+}
+
+int File::get_estimated_lines_count() {
+	return estimated_lines_count;
+}
+
 void File::set_lambda(double lambda) {
 	this->lambda = lambda;
 }
 
 double File::get_lambda() {
-	return this->lambda;
+	return lambda;
 }
 
 int File::get_memory_usage() {
