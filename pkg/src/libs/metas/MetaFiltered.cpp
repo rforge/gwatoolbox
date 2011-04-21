@@ -19,7 +19,7 @@
 
 #include "../../include/metas/MetaFiltered.h"
 
-MetaFiltered::MetaFiltered(MetaNumeric* source) throw (MetaException) : MetaNumeric(), source(source)  {
+MetaFiltered::MetaFiltered(MetaNumeric* source, int heap_size) throw (MetaException) : MetaNumeric(heap_size), source(source)  {
 	affiliate_begin = affiliates.begin();
 	affiliate_end = affiliates.end();
 	condition_begin = conditions.begin();
