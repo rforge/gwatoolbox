@@ -623,7 +623,24 @@ cat(list.files(pattern="^(res.*)|(.*(html|png))"), sep="\n")
 @
 
 \section{Additional Tools}
-\emph{Coming soon}.
+
+\subsection{Skewness and Kurtosis Check}
+\label{section:skewness_and_kurtosis_check}
+The skewness and kurtosis of standardized effects are calculated during the automatic quality check procedure and reported in CSV output files for every study.
+In particular, all markers are ranked based on $\chi^2_1$ statistics of $\frac{Effect}{SE}$.
+Then, the skewness and kurtosis of effects are calculated for 100\%, 99\%, 95\%, 75\% and 50\% of the worst markers.
+Finally, the results are reported in the CSV report in the columns \emph{STD\_EFFECT\_1}, \emph{STD\_EFFECT\_0.99}, \emph{STD\_EFFECT\_0.95}, \emph{STD\_EFFECT\_0.75} and \emph{STD\_EFFECT\_0.5}, respectively.
+
+To facilitate the usage of the QC results and enable further comparison of skewness and kurtosis of standardized effects between studies, the \emph{GWAtoolbox} provides an auxiliary funcion \emph{kusk\_check()}.
+For a given list of studies after QC it automatically extracts the skewness and kurtosis values from the generated CSV reports to the \emph{R} data frame.
+Later, an analyst may use the data frame to create customized comparison reports and plots.
+The default skewness and kurtosis comparison report, produced with \emph{kusk\_check()} function, constists of plots depicted on Figure \ref{fig:kusk}.
+\begin{figure}[!ht]
+\centering
+\includegraphics[type=jpg, ext=.jpg, read=.jpg, width=0.7\linewidth]{kusk_plot}
+\caption{The skewness and kurtosis plot.}
+\label{fig:kusk}
+\end{figure}
 
 \begin{thebibliography}{9}
 
