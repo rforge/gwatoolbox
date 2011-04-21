@@ -19,11 +19,11 @@
 
 #include "../../include/metas/MetaImplausibleStrict.h"
 
-MetaImplausibleStrict::MetaImplausibleStrict() throw (MetaException):MetaNumeric(), n_less(0), n_greater(0) {
+MetaImplausibleStrict::MetaImplausibleStrict(int heap_size) throw (MetaException): MetaNumeric(heap_size), n_less(0), n_greater(0) {
 
 }
 
-MetaImplausibleStrict::MetaImplausibleStrict(double less, double greater) throw (MetaException):MetaNumeric() {
+MetaImplausibleStrict::MetaImplausibleStrict(double less, double greater, int heap_size) throw (MetaException): MetaNumeric(heap_size) {
 	this->less = less;
 	this->greater = greater;
 
