@@ -58,6 +58,10 @@ SEXP QC_process_script(SEXP script_name, SEXP file_separator) {
 	SEXP files_count = R_NilValue;
 	SEXP external_pointer = R_NilValue;
 
+	clock_t start_time = 0;
+	clock_t end_time = 0;
+	double execution_time = 0.0;
+
 	c_script_name = CHAR(STRING_ELT(script_name, 0));
 
 	if ((strlen(c_script_name) == 0) || (strspn(c_script_name, " \t") == strlen(c_script_name))) {
@@ -72,7 +76,26 @@ SEXP QC_process_script(SEXP script_name, SEXP file_separator) {
 
 	try {
 		Analyzer analyzer;
+
+		Rprintf("Processing input script... ");
+		R_FlushConsole();
+#ifndef LINUX
+		R_ProcessEvents();
+#endif
+
+		start_time = clock();
+
 		files = analyzer.process_script(c_script_name, c_file_separator[0]);
+
+		end_time = clock();
+		execution_time = (end_time - start_time)/(double)CLOCKS_PER_SEC;
+
+		Rprintf(" Done. (%g sec)\n", execution_time);
+		R_FlushConsole();
+#ifndef LINUX
+		R_ProcessEvents();
+#endif
+
 	} catch (AnalyzerException &e) {
 		if (files != NULL) {
 			for (unsigned int i = 0; i < files->size(); i++) {
@@ -1742,6 +1765,8 @@ int main(int args, char** argv) {
 	char fileSep = '\\';
 	const char* resLocation = "inst\\extdata\\";
 
+	double* data = NULL;
+
 	try {
 		Analyzer analyzer;
 
@@ -1760,8 +1785,6 @@ int main(int args, char** argv) {
 			analyzer.print_result_txt(**file_it);
 			analyzer.print_result_csv(**file_it);
 			analyzer.print_result_html(**file_it, plots, resLocation);
-
-			/*analyzer.get_line_number(**file_it);*/
 
 			end_time = clock();
 			execution_time = (end_time - start_time)/(double)CLOCKS_PER_SEC;
