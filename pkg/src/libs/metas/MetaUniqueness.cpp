@@ -19,13 +19,13 @@
 
 #include "../../include/metas/MetaUniqueness.h"
 
-MetaUniqueness::MetaUniqueness() throw (MetaException) : Meta(),
+MetaUniqueness::MetaUniqueness(int heap_size) throw (MetaException) : Meta(),
 	n(0), na_value(false), data(NULL), new_data(NULL), new_value(NULL),
-	current_heap_size(Meta::HEAP_SIZE) {
+	current_heap_size(heap_size) {
 
-	data = (char**)malloc(Meta::HEAP_SIZE * sizeof(char*));
+	data = (char**)malloc(heap_size * sizeof(char*));
 	if (data == NULL) {
-		throw MetaException(0, "MetaUniqueness", "MetaUniqueness()", "data", Meta::HEAP_SIZE * sizeof(char*));
+		throw MetaException(0, "MetaUniqueness", "MetaUniqueness()", "data", heap_size * sizeof(char*));
 	}
 }
 
