@@ -19,7 +19,7 @@
 
 #include "../../include/metas/MetaNumeric.h"
 
-MetaNumeric::MetaNumeric() throw (MetaException) : Meta(),
+MetaNumeric::MetaNumeric(int heap_size) throw (MetaException) : Meta(),
 	end_ptr(NULL), d_value(0.0),
 	n(0), na(0), mean(0.0), sd(0.0),
 	min(numeric_limits<double>::infinity()),
@@ -27,7 +27,7 @@ MetaNumeric::MetaNumeric() throw (MetaException) : Meta(),
 	median(numeric_limits<double>::quiet_NaN()),
 	skew(0.0), kurtosis(0.0),
 	numeric(true), na_value(false), value(numeric_limits<double>::quiet_NaN()),
-	data(NULL), new_data(NULL), current_heap_size(Meta::HEAP_SIZE),
+	data(NULL), new_data(NULL), current_heap_size(heap_size),
 	color(NULL), create_histogram(true), create_boxplot(true), create_qqplot(true),
 	histogram(NULL), boxplot(NULL), qqplot(NULL), plot(NULL), print_min(true),
 	print_max(true), print_median(true), print_skewness(true), print_kurtosis(true),
@@ -43,9 +43,9 @@ MetaNumeric::MetaNumeric() throw (MetaException) : Meta(),
 	quantiles[7][0] = 0.99;
 	quantiles[8][0] = 1.00;
 
-	data = (double*)malloc(Meta::HEAP_SIZE * sizeof(double));
+	data = (double*)malloc(heap_size * sizeof(double));
 	if (data == NULL) {
-		throw MetaException(0, "MetaNumeric", "MetaNumeric()", "data", Meta::HEAP_SIZE * sizeof(double));
+		throw MetaException(0, "MetaNumeric", "MetaNumeric()", "data", heap_size * sizeof(double));
 	}
 }
 
