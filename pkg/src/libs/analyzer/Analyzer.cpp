@@ -58,7 +58,8 @@ const char* Analyzer::COMMA = "COMMA";
 const char* Analyzer::TAB = "TAB";
 const char* Analyzer::SEMICOLON = "SEMICOLON";
 const char* Analyzer::MISSED = "MISSING";
-const int Analyzer::CHECK_ROW_COUNT = 10;
+const int Analyzer::CHECK_ROW_COUNT_FOR_SEPARATOR = 10;
+const int Analyzer::CHECK_ROW_COUNT_FOR_SIZE = 10;
 const int Analyzer::SEPARATORS_SIZE = 4;
 const char Analyzer::separators[SEPARATORS_SIZE] = {
 		',', '\t', ' ', ';'
@@ -569,13 +570,29 @@ vector<File*>* Analyzer::process_script(const char* file_name, char file_separat
 		throw AnalyzerException(2, file_name);
 	}
 
-	/* Automatic column separator detection and final checks */
+	/* Automatic column separator detection, estimation of file size, and final checks */
 	if (files != NULL) {
 		for (file_it = files->begin(); file_it != files->end(); file_it++) {
 			if (((*file_it)->get_property(HEADER_SEPARATOR) == NULL) ||
 					((*file_it)->get_property(DATA_SEPARATOR) == NULL)) {
 				detect_separators(**file_it);
 			}
+
+/*			clock_t start_time = 0;
+			clock_t end_time = 0;
+			double execution_time = 0.0;
+
+			start_time = clock();*/
+
+			estimate_lines_count(**file_it);
+
+/*			end_time = clock();
+			execution_time = (end_time - start_time)/(double)CLOCKS_PER_SEC;
+
+			cout << (*file_it)->get_file_name() << " " << (*file_it)->get_estimated_lines_count();
+			cout << " (" << execution_time << " sec )" << endl;*/
+
+			//TODO: throw exception if empty file?
 
 			check_separators(**file_it);
 			check_missing_value(**file_it);
@@ -2970,7 +2987,7 @@ void Analyzer::detect_separators(File& file) throw (AnalyzerException) {
 		}
 
 		/* Read next N rows and calculate number of tokens for each separator. */
-		while ((!ifile_stream.eof()) && (row < CHECK_ROW_COUNT)) {
+		while ((!ifile_stream.eof()) && (row < CHECK_ROW_COUNT_FOR_SEPARATOR)) {
 			length = get_line(ifile_stream, line_buffer, LINE_BUFFER_SIZE);
 
 			if (length > 0) {
@@ -3139,7 +3156,7 @@ void Analyzer::process_header(File& file, ifstream& ifile_stream) throw (ifstrea
 		while (token != NULL) {
 			if ((common_name = file.get_common_column(token)) != NULL) {
 				if (strcmp(common_name, MARKER) == 0) {
-					meta = new MetaUniqueness();
+					meta = new MetaUniqueness(file.get_estimated_lines_count());
 				}
 				else if ((strcmp(common_name, ALLELE1) == 0) || (strcmp(common_name, ALLELE2) == 0) ||
 						(strcmp(common_name, CHR) == 0) || strcmp(common_name, STRAND) == 0) {
@@ -3148,7 +3165,7 @@ void Analyzer::process_header(File& file, ifstream& ifile_stream) throw (ifstrea
 				else if (strcmp(common_name, STDERR) == 0) {
 					thresholds = file.get_threshold(STDERR);
 
-					meta = new MetaImplausible(thresholds->at(0), thresholds->at(1));
+					meta = new MetaImplausible(thresholds->at(0), thresholds->at(1), file.get_estimated_lines_count());
 
 					numeric_metas->push_back((MetaNumeric*)meta);
 					((MetaImplausible*)meta)->set_description("All data");
@@ -3159,7 +3176,7 @@ void Analyzer::process_header(File& file, ifstream& ifile_stream) throw (ifstrea
 				else if (strcmp(common_name, OEVAR_IMP) == 0) {
 					thresholds = file.get_threshold(OEVAR_IMP);
 
-					meta = new MetaImplausibleStrict(thresholds->at(0), thresholds->at(1));
+					meta = new MetaImplausibleStrict(thresholds->at(0), thresholds->at(1), file.get_estimated_lines_count());
 
 					numeric_metas->push_back((MetaNumeric*)meta);
 					((MetaImplausibleStrict*)meta)->set_description("All data");
@@ -3170,7 +3187,7 @@ void Analyzer::process_header(File& file, ifstream& ifile_stream) throw (ifstrea
 				else if (strcmp(common_name, PVALUE) == 0) {
 					thresholds = file.get_threshold(PVALUE);
 
-					meta = new MetaImplausibleStrict(thresholds->at(0), thresholds->at(1));
+					meta = new MetaImplausibleStrict(thresholds->at(0), thresholds->at(1), file.get_estimated_lines_count());
 
 					numeric_metas->push_back((MetaNumeric*)meta);
 					((MetaImplausibleStrict*)meta)->set_plots(true, false, false);
@@ -3183,7 +3200,7 @@ void Analyzer::process_header(File& file, ifstream& ifile_stream) throw (ifstrea
 				else if (strcmp(common_name, FREQLABEL) == 0) {
 					thresholds = file.get_threshold(FREQLABEL);
 
-					meta = new MetaImplausibleStrictAdjusted(thresholds->at(0), thresholds->at(1), 0.5);
+					meta = new MetaImplausibleStrictAdjusted(thresholds->at(0), thresholds->at(1), 0.5, file.get_estimated_lines_count());
 
 					numeric_metas->push_back((MetaNumeric*)meta);
 					((MetaImplausibleStrictAdjusted*)meta)->set_description(token);
@@ -3194,7 +3211,7 @@ void Analyzer::process_header(File& file, ifstream& ifile_stream) throw (ifstrea
 				else if	(strcmp(common_name, HWE_PVAL) == 0) {
 					thresholds = file.get_threshold(HWE_PVAL);
 
-					meta = new MetaImplausibleStrict(thresholds->at(0), thresholds->at(1));
+					meta = new MetaImplausibleStrict(thresholds->at(0), thresholds->at(1), file.get_estimated_lines_count());
 
 					if (strcmp(verbosity, VERBOSITY_LOW) == 0) {
 						((MetaImplausibleStrict*)meta)->set_plots(false, false, false);
@@ -3210,7 +3227,7 @@ void Analyzer::process_header(File& file, ifstream& ifile_stream) throw (ifstrea
 				else if (strcmp(common_name, CALLRATE) == 0) {
 					thresholds = file.get_threshold(CALLRATE);
 
-					meta = new MetaImplausibleStrict(thresholds->at(0), thresholds->at(1));
+					meta = new MetaImplausibleStrict(thresholds->at(0), thresholds->at(1), file.get_estimated_lines_count());
 
 					if (strcmp(verbosity, VERBOSITY_LOW) == 0) {
 						((MetaImplausibleStrict*)meta)->set_plots(false, false, false);
@@ -3223,7 +3240,7 @@ void Analyzer::process_header(File& file, ifstream& ifile_stream) throw (ifstrea
 					plots->push_back((MetaImplausibleStrict*)meta);
 				}
 				else if ((strcmp(common_name, EFFECT) == 0)) {
-					meta = new MetaNumeric();
+					meta = new MetaNumeric(file.get_estimated_lines_count());
 					numeric_metas->push_back((MetaNumeric*)meta);
 					((MetaNumeric*)meta)->set_description("All data");
 					((MetaNumeric*)meta)->set_ouptut(false, false, false, true, true, true);
@@ -3231,7 +3248,7 @@ void Analyzer::process_header(File& file, ifstream& ifile_stream) throw (ifstrea
 					plots->push_back((MetaNumeric*)meta);
 				}
 				else if ((strcmp(common_name, N_TOTAL) == 0)) {
-					meta = new MetaNumeric();
+					meta = new MetaNumeric(file.get_estimated_lines_count());
 
 					if (strcmp(verbosity, VERBOSITY_LOW) == 0) {
 						((MetaNumeric*)meta)->set_plots(true, false, false);
@@ -3244,7 +3261,7 @@ void Analyzer::process_header(File& file, ifstream& ifile_stream) throw (ifstrea
 					plots->push_back((MetaNumeric*)meta);
 				}
 				else if  (strcmp(common_name, IMPUTED) == 0) {
-					meta = new MetaNumeric();
+					meta = new MetaNumeric(file.get_estimated_lines_count());
 
 					if (strcmp(verbosity, VERBOSITY_LOW) == 0) {
 						((MetaNumeric*)meta)->set_plots(false, false, false);
@@ -3255,7 +3272,7 @@ void Analyzer::process_header(File& file, ifstream& ifile_stream) throw (ifstrea
 					plots->push_back((MetaNumeric*)meta);
 				}
 				else if (strcmp(common_name, USED_FOR_IMP) == 0) {
-					meta = new MetaNumeric();
+					meta = new MetaNumeric(file.get_estimated_lines_count());
 
 					if (strcmp(verbosity, VERBOSITY_LOW) == 0) {
 						((MetaNumeric*)meta)->set_plots(false, false, false);
@@ -3378,7 +3395,7 @@ void Analyzer::initialize_filters_and_crosstables(File& file) throw (FileExcepti
 		numeric_metas_it = numeric_metas->begin();
 		while (numeric_metas_it != numeric_metas->end()) {
 			if (*numeric_metas_it != NULL) {
-				filtered_meta = new MetaFiltered(*numeric_metas_it);
+				filtered_meta = new MetaFiltered(*numeric_metas_it, file.get_estimated_lines_count());
 				filtered_meta->set_common_name((*numeric_metas_it)->get_common_name());
 				if (strcmp((*numeric_metas_it)->get_common_name(), FREQLABEL) == 0) {
 					filtered_meta->set_actual_name("MAF");
@@ -3412,7 +3429,7 @@ void Analyzer::initialize_filters_and_crosstables(File& file) throw (FileExcepti
 	}
 
 	if ((effect != NULL) && (freqlabel != NULL) && (oevar_imp != NULL) && (se != NULL)) {
-		filtered_meta = new MetaFiltered(effect);
+		filtered_meta = new MetaFiltered(effect, file.get_estimated_lines_count());
 		filtered_meta->set_common_name(Analyzer::EFFECT_HQ);
 		filtered_meta->set_actual_name(Analyzer::EFFECT_HQ);
 		filtered_meta->set_plots(false, true, false);
@@ -3430,7 +3447,7 @@ void Analyzer::initialize_filters_and_crosstables(File& file) throw (FileExcepti
 	}
 
 	if (pvalue != NULL) {
-		filtered_meta = new MetaFiltered(pvalue);
+		filtered_meta = new MetaFiltered(pvalue, file.get_estimated_lines_count());
 		filtered_meta->set_common_name(Analyzer::PVALUE_FROM0TO1);
 		filtered_meta->set_actual_name(Analyzer::PVALUE_FROM0TO1);
 		filtered_meta->set_plots(false, false, true);
@@ -3444,7 +3461,7 @@ void Analyzer::initialize_filters_and_crosstables(File& file) throw (FileExcepti
 	}
 
 	if ((pvalue != NULL) && (freqlabel != NULL) && (oevar_imp != NULL) && (se != NULL)) {
-		filtered_meta = new MetaFiltered(pvalue);
+		filtered_meta = new MetaFiltered(pvalue, file.get_estimated_lines_count());
 		filtered_meta->set_common_name(Analyzer::PVALUE_HQ_1);
 		filtered_meta->set_actual_name(Analyzer::PVALUE_HQ_1);
 		filtered_meta->set_plots(true, false, true);
@@ -3463,7 +3480,7 @@ void Analyzer::initialize_filters_and_crosstables(File& file) throw (FileExcepti
 	}
 
 	if ((pvalue != NULL) && (freqlabel != NULL) && (oevar_imp != NULL) && (se != NULL)) {
-		filtered_meta = new MetaFiltered(pvalue);
+		filtered_meta = new MetaFiltered(pvalue, file.get_estimated_lines_count());
 		filtered_meta->set_common_name(Analyzer::PVALUE_HQ_2);
 		filtered_meta->set_actual_name(Analyzer::PVALUE_HQ_2);
 		filtered_meta->set_plots(false, false, true);
@@ -3482,7 +3499,7 @@ void Analyzer::initialize_filters_and_crosstables(File& file) throw (FileExcepti
 	}
 
 	if ((pvalue != NULL) && (freqlabel != NULL) && (se != NULL) && (effect != NULL)) {
-		filtered_meta = new MetaFiltered(pvalue);
+		filtered_meta = new MetaFiltered(pvalue, file.get_estimated_lines_count());
 		filtered_meta->set_common_name(Analyzer::PVALUE_MAF_1);
 		filtered_meta->set_actual_name(Analyzer::PVALUE_MAF_1);
 		filtered_meta->set_plots(false, false, true);
@@ -3502,7 +3519,7 @@ void Analyzer::initialize_filters_and_crosstables(File& file) throw (FileExcepti
 	}
 
 	if ((pvalue != NULL) && (freqlabel != NULL) && (se != NULL) && (effect != NULL)) {
-		filtered_meta = new MetaFiltered(pvalue);
+		filtered_meta = new MetaFiltered(pvalue, file.get_estimated_lines_count());
 		filtered_meta->set_common_name(Analyzer::PVALUE_MAF_2);
 		filtered_meta->set_actual_name(Analyzer::PVALUE_MAF_2);
 		filtered_meta->set_plots(false, false, true);
@@ -3522,7 +3539,7 @@ void Analyzer::initialize_filters_and_crosstables(File& file) throw (FileExcepti
 	}
 
 	if ((pvalue != NULL) && (oevar_imp != NULL) && (se != NULL) && (effect != NULL)) {
-		filtered_meta = new MetaFiltered(pvalue);
+		filtered_meta = new MetaFiltered(pvalue, file.get_estimated_lines_count());
 		filtered_meta->set_common_name(Analyzer::PVALUE_IMP_1);
 		filtered_meta->set_actual_name(Analyzer::PVALUE_IMP_1);
 		filtered_meta->set_plots(false, false, true);
@@ -3542,7 +3559,7 @@ void Analyzer::initialize_filters_and_crosstables(File& file) throw (FileExcepti
 	}
 
 	if ((pvalue != NULL) && (oevar_imp != NULL) && (se != NULL) && (effect != NULL)) {
-		filtered_meta = new MetaFiltered(pvalue);
+		filtered_meta = new MetaFiltered(pvalue, file.get_estimated_lines_count());
 		filtered_meta->set_common_name(Analyzer::PVALUE_IMP_2);
 		filtered_meta->set_actual_name(Analyzer::PVALUE_IMP_2);
 		filtered_meta->set_plots(false, false, true);
@@ -3888,80 +3905,146 @@ void Analyzer::check_output_prefix(File& file) throw (AnalyzerException, FileExc
 	}
 }
 
-int Analyzer::get_line_number(File& file) throw (AnalyzerException) {
+/*
+ * 	Description:
+ * 		Estimates the number of lines in the input file. For the estimation uses
+ * 		first CHECK_ROW_COUNT_FOR_SIZE non-empty file lines without header.
+ *	Arguments:
+ *		file 	-- file for estimation.
+ */
+void Analyzer::estimate_lines_count(File& file) throw (AnalyzerException) {
 	ifstream ifile_stream;
-	char character = '\0';
-	vector<int> line_length;
-	int header_length = 0;
-	int line_count = 0;
-	int char_count = 0;
 	int file_length = 0;
-	double median = 0.0;
+	int current_pos = 0;
+	int header_length = 0;
+	char character = '\0';
+	int chars_count = 0;
+	double location = 0.0;
+	vector<double> medians;
+	int lines_count = 0;
 	double mean = 0.0;
-	int estimated_line_count = 0;
+	double median = 0.0;
+	int estimated_lines_count = 0;
+	int denominator = CHECK_ROW_COUNT_FOR_SIZE * 10;
+
+	multiset<int> line_lengths;
+	multiset<int>::iterator it;
+	int pos = 0;
 
 	ifile_stream.exceptions(ifstream::failbit | ifstream::badbit);
 	ifile_stream.setf(ifstream::skipws);
 
 	try {
-		ifile_stream.open(file.get_full_path());
-		ifile_stream.seekg((streampos)0, ifstream::beg);
+		ifile_stream.open(file.get_full_path(), ios::binary);
 	} catch (ifstream::failure &e) {
 		throw AnalyzerException(1, file.get_full_path());
 	}
 
 	try {
-		while (!ifile_stream.eof() && (line_count < 101)) {
+		ifile_stream.seekg((streampos)0, ifstream::end);
+		file_length = ifile_stream.tellg();
+
+		ifile_stream.seekg((streampos)0, ifstream::beg);
+		current_pos = ifile_stream.tellg();
+
+		while (!ifile_stream.eof()) {
 			ifile_stream.get(character);
-			char_count += 1;
+			chars_count += 1;
 			if (character == '\n') {
-				line_length.push_back(char_count);
-				line_count += 1;
-				char_count = 0;
+				header_length = chars_count;
+				chars_count = 0;
+				break;
 			}
 		}
-
-		if (line_count > 1) {
-			header_length = line_length.front();
-
-			line_length.erase(line_length.begin());
-			line_count = line_length.size();
-
-			sort(line_length.begin(), line_length.end());
-			if (line_count % 2 == 0) {
-				median = (line_length.at(line_count / 2 - 1) +
-						line_length.at(line_count / 2)) / 2.0;
-			} else {
-				median = line_length.at(line_count / 2);
-			}
-
-			for (int i = 0; i < line_count; i++) {
-				mean += line_length.at(i);
-			}
-			mean = mean / line_count;
-
-			ifile_stream.seekg((streampos)0, ifstream::end);
-			file_length = ifile_stream.tellg();
-
-			cout << "Number of lines: " << line_length.size() << endl;
-			cout << "File length without header: " << file_length - header_length << endl;
-			cout << "Median: " << median << endl;
-			cout << "Avg: " << mean << endl;
-			estimated_line_count =  (int)((file_length - header_length) / median);
-			cout << "Estimated number of lines: " << estimated_line_count << endl;
-			estimated_line_count = (int)((file_length - header_length) / mean);
-			cout << "Estimated number of lines: " << estimated_line_count << endl;
-		}
-	}
-	catch (ifstream::failure &e) {
+	} catch (ifstream::failure &e) {
 		if (!ifile_stream.eof()) {
 			throw &e;
+		} else {
+			ifile_stream.clear();
+			header_length = chars_count;
 		}
 	}
 
-	try {
-		ifile_stream.close();
-	} catch (ifstream::failure &e) {
-		throw AnalyzerException(2, file.get_full_path());
+	if (header_length < file_length) {
+		srand(time(NULL));
+
+		for (int j = 0; j < 100; j++) {
+			for (int i = 0; i < CHECK_ROW_COUNT_FOR_SIZE; i++) {
+				location = (rand() % denominator) / (double)denominator;
+				current_pos = (int)(file_length * location);
+
+				try {
+					ifile_stream.seekg((streampos)current_pos, ifstream::beg);
+
+					while (!ifile_stream.eof()) {
+						ifile_stream.get(character);
+						if (character == '\n') {
+							break;
+						}
+					}
+
+					while (!ifile_stream.eof()) {
+						ifile_stream.get(character);
+						chars_count += 1;
+						if (character == '\n') {
+							line_lengths.insert(chars_count);
+							chars_count = 0;
+							break;
+						}
+					}
+
+				}
+				catch (ifstream::failure &e) {
+					if (!ifile_stream.eof()) {
+						throw &e;
+					} else {
+						ifile_stream.clear();
+
+						if (chars_count > 0) {
+							line_lengths.insert(chars_count);
+							chars_count = 0;
+						}
+					}
+				}
+			}
+
+			lines_count = line_lengths.size();
+
+			if (lines_count > 0) {
+				it = line_lengths.begin();
+
+				while (pos < (lines_count / 2 - 1)) {
+					pos += 1;
+					it++;
+				}
+
+				if (lines_count % 2 == 0) {
+					median = (*it + *(++it)) / 2.0;
+				} else {
+					median = *(++it);
+				}
+
+				medians.push_back(median);
+
+				median = 0.0;
+				pos = 0;
+				line_lengths.clear();
+			}
+		}
+
+		try {
+			ifile_stream.close();
+		} catch (ifstream::failure &e) {
+			throw AnalyzerException(2, file.get_full_path());
+		}
+
+		for (unsigned int i = 0; i < medians.size(); i++) {
+			mean += medians.at(i);
+		}
+		mean = mean / medians.size();
+
+		estimated_lines_count =  (int)ceil((file_length - header_length) / mean);
 	}
+
+	file.set_estimated_lines_count(estimated_lines_count);
 }
