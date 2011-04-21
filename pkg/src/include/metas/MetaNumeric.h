@@ -74,7 +74,7 @@ public:
 
 	static int compare (const void* first, const void* second);
 
-	MetaNumeric() throw (MetaException);
+	MetaNumeric(int heap_size = HEAP_SIZE) throw (MetaException);
 	virtual ~MetaNumeric();
 
 	void put(char* value) throw (MetaException);

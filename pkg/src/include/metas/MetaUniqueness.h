@@ -50,7 +50,7 @@ private:
 	static int compare (const void* first, const void* second);
 
 public:
-	MetaUniqueness() throw (MetaException);
+	MetaUniqueness(int heap_size = HEAP_SIZE) throw (MetaException);
 	virtual ~MetaUniqueness();
 	void put(char* value) throw (MetaException);
 	void finalize() throw (MetaException);

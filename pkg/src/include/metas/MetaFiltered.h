@@ -44,7 +44,7 @@ private:
 	map<MetaNumeric*, Evaluable*>::iterator condition_end;
 
 public:
-	MetaFiltered(MetaNumeric* source) throw (MetaException);
+	MetaFiltered(MetaNumeric* source, int heap_size = HEAP_SIZE) throw (MetaException);
 	virtual ~MetaFiltered();
 
 	void add_dependency(MetaNumeric& meta);

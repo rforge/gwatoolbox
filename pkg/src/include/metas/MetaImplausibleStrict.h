@@ -31,8 +31,8 @@ protected:
 	int n_greater;
 
 public:
-	MetaImplausibleStrict() throw (MetaException);
-	MetaImplausibleStrict(double less, double greater) throw (MetaException);
+	MetaImplausibleStrict(int heap_size = HEAP_SIZE) throw (MetaException);
+	MetaImplausibleStrict(double less, double greater, int heap_size = HEAP_SIZE) throw (MetaException);
 	virtual ~MetaImplausibleStrict();
 	void put(char* value) throw (MetaException);
 	void print(ostream& stream);

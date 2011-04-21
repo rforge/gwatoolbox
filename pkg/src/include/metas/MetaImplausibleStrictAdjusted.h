@@ -29,7 +29,7 @@ private:
 	double threshold;
 
 public:
-	MetaImplausibleStrictAdjusted(double less, double greater, double threshold) throw (MetaException);
+	MetaImplausibleStrictAdjusted(double less, double greater, double threshold, int heap_size = HEAP_SIZE) throw (MetaException);
 	virtual ~MetaImplausibleStrictAdjusted();
 	void put(char* value) throw (MetaException);
 	void set_threshold(double threshold);
