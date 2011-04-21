@@ -74,6 +74,7 @@ private:
 	char header_separator;
 	char data_separator;
 	char* missing_value;
+	int estimated_lines_count;
 
 	double lambda;
 
@@ -149,6 +150,9 @@ public:
 
 	void set_case_sensitive(bool sensitive);
 	bool is_case_sensitive();
+
+	void set_estimated_lines_count(int estimated_line_count);
+	int get_estimated_lines_count();
 
 	void set_lambda(double lambda);
 	double get_lambda();
