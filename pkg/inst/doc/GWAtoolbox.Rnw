@@ -5,6 +5,8 @@
 \usepackage[pdftex,colorlinks]{hyperref}
 % \usepackage[utf8]{inputenc}
 
+\sloppy
+
 \title{GWAtoolbox \\An R package for the fast processing of data from Genome-Wide Association Studies}
 \author{Christian Fuchsberger \and Daniel Taliun \and Cristian Pattaro}
 
@@ -586,13 +588,87 @@ The labels "first" and "second" will be used to label the two studies in the plo
 \end{example}
 
 \section{The Output Files}
-The \emph{GWAtoolbox} package produces four types of files:
+The typical output of the \emph{gwasqc()} function includes the following files:
 \begin{enumerate}
-\item Figures with QQ-plots, histograms and boxplots (see Figure \ref{fig:plots} for all employed input columns and filters).
-\item Textual report file with \emph{.txt} extension.
-\item Comma separated file with \emph{.csv} extension, that contains statistics for the high quality imputation data (see Section \ref{section:hq_data_filter}).
-\item The \emph{HTML} document, that combines both textual output and figures.
+\item \textbf{Graphical files} (\emph{PNG} extention) -- several files per study.
+These files include \textbf{histograms} and \textbf{boxplots} of the distribution of the main statistics from each GWAS file: effect estimates, imputation quality index, sample size, p-value, allele frequency; 
+\textbf{QQ-plots} of the p-value distribution are also provided to investigate the presence of study-design bias.
+See Figure \ref{fig:plots} for an exhaustive list of available plots.
+\item \textbf{Textual report file} (\emph{TXT} extention) -- one file per study.
+This file contains information on the GWAS file-format quality and statistics summarizing the distribution of all fields present in the GWAS files (effect estimates, p-values, etc.).
+The statistics reported in the textual output file can be compared with the graphical output described above.
+\item \textbf{Comma separated report file} (\emph{CSV} extention) -- one file per study.
+This file contains statistics limited to the high quality SNPs, as they have been defined by the user when setting the parameter \textbf{HQ\_SNP}\index{HQ\_SNP} in the QC script (see Section \ref{section:hq_data_filter}).
+The tabular format of this file is intended to be useful for users who wants to perform additional analyses and compare results from different GWAS files without having to manage large original GWAS files.
+Figure \ref{fig:csv_report_file} shows an example of such file.
+
+\begin{figure}[!h]
+\begin{center}
+\scalebox{0.5}{
+\noindent\makebox[\textwidth]{
+\begin{tabular}{|l|l|l|l|l|l|l|l|l|l|l|l|l|l|l|}
+\hline
+& N & EFFECT & STDERR & PVALUE & MAF & IMPUTED & IMP\_QUALITY & CALLRATE & HWE\_PVAL & STD\_EFFECT\_0.5 & STD\_EFFECT\_0.75 & STD\_EFFECT\_0.95 & STD\_EFFECT\_0.99 & STD\_EFFECT\_1 \\
+\hline
+N & 2543887 & 2542617 & 2542422 & 2542617 & 2543887 & 2543887 & 2543887 & 2543887 & NA & NA & NA & NA & NA & NA \\
+\hline
+N\_HQ & 2448544 & 2448544 & 2448544 & 2448544 & 2448544 & 2448544 & 2448544 & 2448544 & NA & NA & NA & NA & NA & NA \\
+\hline
+N\_NAs & 0 & 1270 & 1270 & 1270 & 0 & 0 & 0 & 0 & NA & NA & NA & NA & NA & NA \\
+\hline
+Mean & 516 & -0.00137 & 0.295076 & 0.500823 & 0.230416 & 1 & 0.958868 & 1 & NA & NA & NA & NA & NA & NA \\
+\hline
+StdDev & 0 & 0.333379 & 0.158119 & 0.28873 & 0.143312 & 0 & 0.097734 & 0 & NA & NA & NA & NA & NA & NA \\
+\hline
+Min & 516 & -8.76038 & 0.17353 & 7.34E-08 & 0.010001 & 1 & 0.300006 & 1 & NA & NA & NA & NA & NA & NA \\
+\hline
+Max & 516 & 6.12165 & 2.53341 & 1 & 0.5 & 1 & 1.0467 & 1 & NA & NA & NA & NA & NA & NA \\
+\hline
+Median & 516 & -0.00149 & 0.233707 & 0.502629 & 0.217008 & 1 & 0.994577 & 1 & NA & NA & NA & NA & NA & NA \\
+\hline
+Skewness & nan & -0.06933 & 2.886758 & -0.00935 & 0.214034 & nan & -3.90226 & nan & NA & -0.00587 & -0.01036 & 0.022903 & 0.040024 & -0.07186 \\
+\hline
+Kurtosis & nan & 9.109873 & 11.14145 & -1.20085 & -1.18454 & nan & 16.76683 & nan & NA & 3.297394 & 3.822136 & 4.712606 & 5.861049 & 9.066722 \\
+\hline
+\end{tabular}}
+}
+\caption{The comma separated report file.}
+\label{fig:csv_report_file}
+\end{center}
+\end{figure}
+
+For each of the variables listed by columns, summary statistics are reported by row.
+Specifically:
+\begin{itemize}
+\item \textbf{N} -- number of SNPs with available information (i.e. non-missing values).
+\item \textbf{N\_HQ} -- number of high quality SNPs with that information available (i.e. non-missing values).
+\item \textbf{N\_NAs} -- number of SNPs with missing values for the specific field of interest.
+\item \textbf{Mean}, \textbf{StdDev}, \textbf{Min}, \textbf{Max}, \textbf{Median}, \textbf{Skewness}, and \textbf{Kurtosis} are referred to the distribution of the specific field.
+\end{itemize}
+
+Columns include:
+\begin{itemize}
+\item \textbf{N} -- study sample size.
+\item \textbf{EFFECT}, \textbf{STDERR}, and \textbf{PVALUE} -- summaries of the SNP-phenotype associations.
+\item \textbf{MAF}, \textbf{IMPUTED}, \textbf{IMP\_QUALITY}, \textbf{CALLRATE}, and \textbf{HWE\_PVAL} -- summaries of the genotype distribution and quality.
+\item \textbf{STD\_EFFECT\_0.5}, \textbf{STD\_EFFECT\_0.75}, \textbf{STD\_EFFECT\_0.95}, \textbf{STD\_EFFECT\_0.99}, \textbf{STD\_EFFECT\_1} -- these columns are only of interest for the reported skewness and kurtosis of the standardized effect estimates.
+The numbers 0.5, 0.75, 0.95, 0.99, and 1 are referred to the percentage of SNPs with the highest p-values chosen to study the effect size distribution (see Section \ref{section:comparing_skewness_and_kurtosis_of_effect_size_distribution} for additional details).
+\end{itemize}
+
+\item \textbf{An HTML document}, that combines both textual and graphical output, allowing the user to easily surfing across the results and across the studies included in the QC analysis.
+In operating systems allowing graphical interfaces, the \emph{HTML} document should be the first file to be opened to investigate the results.
+\item \textbf{A summary file} (\emph{summary.txt}) which lists the names of the comma separated report files produced by the QC analysis.
+This file is meant to be employed in the additional analyses described in Sections \ref{section:comparing_skewness_and_kurtosis_of_effect_size_distribution} and \ref{section:effect_estimates_precision_by_sample_size}, and is thought to simplify the post-QC data management.
+
 \end{enumerate}
+
+%The \emph{GWAtoolbox} package produces four types of files:
+%\begin{enumerate}
+%\item Figures with QQ-plots, histograms and boxplots (see Figure \ref{fig:plots} for all employed input columns and filters).
+%\item Textual report file with \emph{.txt} extension.
+%\item Comma separated file with \emph{.csv} extension, that contains statistics for the high quality imputation data (see Section \ref{section:hq_data_filter}).
+%\item The \emph{HTML} document, that combines both textual output and figures.
+%\end{enumerate}
 
 \section{Example}
 This is an embedded R code example. All input files of this example are located in the subdirectory \emph{doc} of the installed \emph{GWAtoolbox} package.
@@ -622,33 +698,140 @@ As a result, the following output files were generated:
 cat(list.files(pattern="^(res.*)|(.*(html|png))"), sep="\n")
 @
 
-\section{Additional Tools}
+\section{Between-study comparisons}
+\subsection{Comparing skewness and kurtosis of effect size distribution}
+\label{section:comparing_skewness_and_kurtosis_of_effect_size_distribution}
+Association of genetic markers with continuous or binary phenotypes is generally assessed by the use of linear models, where an effect estimate and its standard error are used to represent the evidence of the association.
+The effect estimates is usually represented by the beta coefficient of  the linear regression model.
+For binary outcome, this summarized by the log(odds ratio) obtained from logistic regression models.
+Let's define with $\theta$ our parameter of interest, and with $SE(\theta)$ its standard error.
+Under the null hypothesis of no association, the distribution of $\theta/SE(\theta) \sim N(0,1)$.
 
-\subsection{Skewness and Kurtosis Check}
-\label{section:skewness_and_kurtosis_check}
-The skewness and kurtosis of standardized effects are calculated during the automatic quality check procedure and reported in CSV output files for every study.
-In particular, all markers are ranked based on $\chi^2_1$ statistics of $\frac{Effect}{SE}$.
-Then, the skewness and kurtosis of effects are calculated for 100\%, 99\%, 95\%, 75\% and 50\% of the worst markers.
-Finally, the results are reported in the CSV report in the columns \emph{STD\_EFFECT\_1}, \emph{STD\_EFFECT\_0.99}, \emph{STD\_EFFECT\_0.95}, \emph{STD\_EFFECT\_0.75} and \emph{STD\_EFFECT\_0.5}, respectively.
+In checking the quality of GWA results, we are interested in assessing potential errors arisen during the analytical process or during the file management process.
+These errors could origin $\theta/SE(\theta)$ distributions that are systematically biased towards positive (or negative) values, or that are over/under-dispersed.
+The \emph{kurtosis} and the \emph{skewness} indices are the natural candidates to perform this kind of assessment.
+Convenient graphical display based on these two indices enables the contemporary plot and comparison of all the studies involved in the meta-analysis, with consequent identification of studies that are systematically different from each other.
 
-To facilitate the usage of the QC results and enable further comparison of skewness and kurtosis of standardized effects between studies, the \emph{GWAtoolbox} provides an auxiliary funcion \emph{kusk\_check()}.
-For a given list of studies after QC it automatically extracts the skewness and kurtosis values from the generated CSV reports to the \emph{R} data frame.
-Later, an analyst may use the data frame to create customized comparison reports and plots.
-The default skewness and kurtosis comparison report, produced with \emph{kusk\_check()} function, constists of plots depicted on Figure \ref{fig:kusk}.
-\begin{figure}[!ht]
+Under the forms proposed by Cramer \cite{Cramer46}, the kurtosis and the skewness indices can be defined as
+$ku=\frac{\frac{1}{n}\sum_{i=1}^{n}(x_i - \bar{x})^4}{\big(\frac{1}{n}\sum_{i=1}^{n}(x_i - \bar{x})^2\big)^2}-3$
+and
+$sk=\frac{\frac{1}{n}\sum_{i=1}^{n}(x_i - \bar{x})^3}{\big(\frac{1}{n}\sum_{i=1}^{n}(x_i - \bar{x})^2\big)^\frac{3}{2}}$.
+The skewness index assesses the symmetry of a distribution around its central value, and the kurtosis index assesses the dispersion of the distribution around its central value.
+If $\theta/SE(\theta) \sim N(0,1)$, then for large sample sizes, $sk_\theta=sk\big(\theta/SE(\theta)\big) \rightarrow 0$ and $ku_\theta=ku\big(\theta/SE(\theta)\big) \rightarrow 0$ (Fisher \cite{Fisher30}; Joanes and Gill \cite{Joanes98}).
+
+In a GWAS setting, we can assume that the 50\% of SNPs with largest p-value are not associated with the phenotype of interest and so, they can be used to represent the null situation.
+Notice that the 50\% of SNPs with worst p-values correspond to the concept of the genomic control inflation factor, lambda, which is estimated based on the median chi-square distribution of the p-values' quantiles.
+
+In real world application, distribution of $\theta/SE(\theta)$ for 50\% worst SNPs is not normally distributed, because SNPs are not independent.
+This situation is more pronounced in presence of genotype imputation, with an excess of values that are too close to 0.
+For this reason, it is not realistic to expect that $ku_\theta \rightarrow 0$: the distribution is leptokuric, and so $ku_\theta > 0$.
+However, as long as the studies involved in the meta-analysis used similar imputation reference platforms, $ku_\theta$ should be similar for all studies.
+For what concerns skewness, there is no good reaseon why $sk_\theta$ of the 50\% worst SNPs shouldn't approximate $0$.
+
+Then, for given $K$ studies, we can estimate $ku_{\theta,k}(50)$ and $sk_{\theta,k}(50)$ for $k = 1, \dots, K$, and we can plot the two vectors $sk_{\theta,[1,\dots,K]}(50)$ vs. $ku_{\theta,[1,\dots,K]}(50)$ in a Cartesian diagram, with every point representing a study.
+We expect all points (studies) to cluster around the same point at $sk=0$, with similar kurtosis value.
+Points (studies) that show strong departures from the main cluster could be submitted to detailed investigation in order to detect the reason of such discrepancy.
+In general, departures along the $sk$-axis are more serious than departures on the $sk$-axis, because the first ones will introduce systematic bias in the meta-analysis with one or a few studies that are systematically different from the others, with effects more often in one direction.
+
+This diagnostic plot is shown in Figure \ref{fig:kusk_check} where the set of SNPs with 50\% largest p-values is compared with other sets of SNPs with the largest 75\%, 95\%, and 99\% p-values, respectively.
+Highlighted are points (studies) that are largely difference from the ones in the cluster.
+In the last scenario, all SNPs are included and the bias is given by the SNPs that are really associated with the phenotype. 
+Outlier studies, that have been identified in the 50\% scatterplot, are colored in red also in the other situations for comparison.
+\begin{figure}[!h]
 \centering
-\includegraphics[type=jpg, ext=.jpg, read=.jpg, width=0.7\linewidth]{kusk_plot}
+\includegraphics[type=png, ext=.png, read=.png, width=\textwidth]{kusk_check_try}
 \caption{The skewness and kurtosis plot.}
-\label{fig:kusk}
-\end{figure}
+\label{fig:kusk_check}
+\end{figure} 
+
+This diagnostic is available in \emph{GWAtoolbox} through the \emph{kusk\_check()} function.
+The working directory should be the same where files generated by the \emph{gwasqc()} have been stored.
+\emph{kusk\_check()} requires the name of the summary file (typically \emph{summary.txt}) and an integer number included between 50, 75, 95, 99, and 100, which corresponds to the percentage of SNPs to be considered as representing the null distribution, starting from the worst p-value.
+The number 100 has been included to give the user the possibility to check the full set of results.
+Results of the \emph{kusk\_check()} function are the skewness vs. kurtosis scatterplot and a dataset with all skewness and kurtosis values from all studies, to allow the user additional investigation and replotting.
+
+\begin{example}
+In this example we report the commands to obtain the scatterplot shown in Figure \ref{fig:kusk_check}, when the 50\% SNPs with largest p-values are considered. 
+It can be seen that, currently, no automatic method to identify outlier studies is implemented and that the user needs to define his/her own criteria.
+<<results=hide>>=
+library(GWAtoolbox)
+W <- kusk_check("GWASQC_script.txt", worst=50, T)
+points(W$sk50,W$ku50, pch=22, bg="orange", cex=2)
+points(W$sk50[W$ku>5],W$ku50[W$ku>5], pch=22, bg=2, cex=2)
+text(W$sk50[W$ku>5],W$ku50[W$ku>5]-5, lab=W$study[W$ku>5], cex=1)
+@
+\end{example} 
+
+\subsection{Effect estimates precision by sample size}
+\label{section:effect_estimates_precision_by_sample_size}
+A different graphical test to compare studies each other is based on the assessment of the distribution of estimates' precision vs. the study sample size.
+In general, the average $SE(\theta)$ should be inversely proportional to the study sample size.
+The function \emph{dispersion\_check()} simply plots a scatterplot of the $mean(SE(\theta))$ vs. the median sample size of all studies, as depicted in the example Figure \ref{fig:dispersion_check}.
+Over-dispersion is defined as the presence of larger SEs than expected given the sample size of the study and under-dispersion is meant to be the opposite phenomenon.
+For example, a study with unmodeled relatedness or population stratification may present SEs that are smaller than another study of similar sample size where these issues were accounted for properly. 
+\begin{figure}[!h]
+\centering
+\includegraphics[type=png, ext=.png, read=.png, width=\textwidth]{dispersion}
+\caption{Schematic representation of the dispersion plot and its interpretation.}
+\label{fig:dispersion_check}
+\end{figure} 
+
+The \emph{dispersion\_check()} function is based on the same summary file (i.e \emph{summary.txt}) used for the \emph{kusk\_check()} function.
+Given that the study sample size is a parameter that could be missing from GWAS files, the function require manual entry of a vector with all study sample sizes.
+Output consists of a dispersion plot and of a dataset that can be used fo additional investigation.
+\begin{example}
+In this example we report the commands to obtain the scatterplot shown in Figure \ref{fig:kusk_check}, when the 50\% SNPs with largest p-values are considered. 
+It can be seen that, currently, no automatic method to identify outlier studies is implemented and that the user needs to define his/her own criteria.
+<<results=hide>>=
+library(GWAtoolbox)
+Z <- dispersion_check("GWASQC_script.txt", plot=T)
+@
+<<>>=
+Z
+@
+<<results=hide>>=
+text(Z$median_n, Z$mean_se, Z$study) # Add study labels
+@
+\end{example} 
+
+\section{Additional Tools}
+In addition to the facilities for the data QC, \emph{GWAtoolbox} also includes facilities including routines for the data manipulation after the GWAS meta-analysis has been done and functions that facilitates result annotation.
+These extensions are currently being debugged and will be made available soon.
+
+%\subsection{Skewness and Kurtosis Check}
+%\label{section:skewness_and_kurtosis_check}
+%The skewness and kurtosis of standardized effects are calculated during the automatic quality check procedure and reported in CSV output files for every study.
+%In particular, all markers are ranked based on $\chi^2_1$ statistics of $\frac{Effect}{SE}$.
+%Then, the skewness and kurtosis of effects are calculated for 100\%, 99\%, 95\%, 75\% and 50\% of the worst markers.
+%Finally, the results are reported in the CSV report in the columns \emph{STD\_EFFECT\_1}, \emph{STD\_EFFECT\_0.99}, \emph{STD\_EFFECT\_0.95}, \emph{STD\_EFFECT\_0.75} and \emph{STD\_EFFECT\_0.5}, respectively.
+
+%To facilitate the usage of the QC results and enable further comparison of skewness and kurtosis of standardized effects between studies, the \emph{GWAtoolbox} provides an auxiliary funcion \emph{kusk\_check()}.
+%For a given list of studies after QC it automatically extracts the skewness and kurtosis values from the generated CSV reports to the \emph{R} data frame.
+%Later, an analyst may use the data frame to create customized comparison reports and plots.
+%The default skewness and kurtosis comparison report, produced with \emph{kusk\_check()} function, constists of plots depicted on Figure \ref{fig:kusk}.
+%\begin{figure}[!ht]
+%\centering
+%\includegraphics[type=jpg, ext=.jpg, read=.jpg, width=0.7\linewidth]{kusk_plot}
+%\caption{The skewness and kurtosis plot.}
+%\label{fig:kusk}
+%\end{figure}
 
 \begin{thebibliography}{9}
 
 \bibitem{Willer10}
-Cristen J. Willer , Yun Li , and Gon�alo R. Abecasis. (2010) \textbf{METAL: fast and efficient meta-analysis of genomewide association scans}. Bioinformatics 26: 2190-2191.
+Cristen J. Willer, Yun Li, and Gon\c{c}alo R. Abecasis. (2010) \textbf{METAL: fast and efficient meta-analysis of genomewide association scans}. Bioinformatics 26: 2190-2191.
 
 \bibitem{Bakker08}
-Paul I.W. de Bakker , Manuel A.R. Ferreira , Xiaoming Jia , Benjamin M. Neale , Soumya Raychaudhuri , and Benjamin F. Voight (2008) \textbf{Practical aspects of imputation-driven meta-analysis of genome-wide association studies}. Hum. Mol. Genet. 17: R122-R128.
+Paul I.W. de Bakker, Manuel A.R. Ferreira, Xiaoming Jia, Benjamin M. Neale, Soumya Raychaudhuri, and Benjamin F. Voight (2008) \textbf{Practical aspects of imputation-driven meta-analysis of genome-wide association studies}. Hum. Mol. Genet. 17: R122-R128.
+
+\bibitem{Cramer46}
+H. Cramer (1946) \textbf{Mathematical Methods of Statistics}. Princeton: Princeton University Press.
+
+\bibitem{Fisher30}
+R.A. Fisher (1930) \textbf{The moments of the distribution for normal samples of measures of departure from normality}. Proc. R. Soc. Series A 130:16-28.
+
+\bibitem{Joanes98}
+D.N. Joanes, C.A. Gill (1998) \textbf{Comparing Measures of Sample Skewness and Kurtosis}. J. Royal Stat. Soc. Series D (The Statistician) 47(1):183-189.
 
 \end{thebibliography}
 
