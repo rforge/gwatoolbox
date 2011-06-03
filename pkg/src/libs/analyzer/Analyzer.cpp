@@ -59,8 +59,10 @@ const char* Analyzer::TAB = "TAB";
 const char* Analyzer::SEMICOLON = "SEMICOLON";
 const char* Analyzer::MISSED = "MISSING";
 const int Analyzer::CHECK_ROW_COUNT_FOR_SEPARATOR = 10;
-const int Analyzer::CHECK_ROW_COUNT_FOR_SIZE = 10;
+const int Analyzer::CHECK_ROW_COUNT_FOR_SIZE = 15;
+const int Analyzer::CHECK_SAMPLE_COUNT_FOR_SIZE = 30;
 const int Analyzer::SEPARATORS_SIZE = 4;
+const char Analyzer::COMMENT = '#';
 const char Analyzer::separators[SEPARATORS_SIZE] = {
 		',', '\t', ' ', ';'
 };
@@ -136,10 +138,12 @@ const char* Analyzer::common_qqplots[COMMON_QQPLOTS_SIZE][2] = {
 const char* Analyzer::CONTENT_STYLE = "content_style.css";
 const char* Analyzer::MENU_STYLE = "menu_style.css";
 const char* Analyzer::JSCRIPT = "script.js";
+
+/* Output file names */
 const char* Analyzer::MENU_FILE = "menu.html";
 const char* Analyzer::MAIN_FILE = "main.html";
 const char* Analyzer::BOXPLOTS_FILE = "boxplots.html";
-const char* Analyzer::SUMMARY_FILE = "summary.txt";
+/*const char* Analyzer::SUMMARY_FILE = "summary.txt";*/
 
 /* File extensions */
 const char* Analyzer::TXT_EXTENSION = ".txt";
@@ -243,16 +247,6 @@ vector<File*>* Analyzer::process_script(const char* file_name, char file_separat
 		while (!ifile_stream.eof()) {
 			length = get_line(ifile_stream, line_buffer, LINE_BUFFER_SIZE);
 
-//			TODO: BEGIN. Replace with your function
-//			ifile_stream.getline(line_buffer, LINE_BUFFER_SIZE);
-//
-//			length = ifile_stream.gcount() - 2;
-//			while ((length >= 0) && (line_buffer[length] == '\r')) {
-//				line_buffer[length] = '\0';
-//				length -= 1;
-//			}
-//			TODO: END.
-
 			if ((length > 0) && (strspn(line_buffer, blanks) != strlen(line_buffer))) {
 				token = strtok(line_buffer, separator);
 
@@ -333,16 +327,16 @@ vector<File*>* Analyzer::process_script(const char* file_name, char file_separat
 						default_file.add_column(PVALUE, token);
 
 						token = strtok(NULL, separator);
-						if (token != NULL) {
+						if ((token != NULL) && (strlen(token) > 0) && (token[0] != COMMENT)) {
 							default_file.remove_threshold(PVALUE);
-							while (token != NULL) {
+							do {
 								d_value = strtod(token, &end_ptr);
 								if (*end_ptr != '\0') {
 									throw AnalyzerException(27, token);
 								}
 								default_file.add_threshold(PVALUE, d_value);
 								token = strtok(NULL, separator);
-							}
+							} while ((token != NULL) && (strlen(token) > 0) && (token[0] != COMMENT));
 						}
 					}
 				}
@@ -360,16 +354,16 @@ vector<File*>* Analyzer::process_script(const char* file_name, char file_separat
 						default_file.add_column(STDERR, token);
 
 						token = strtok(NULL, separator);
-						if (token != NULL) {
+						if ((token != NULL) && (strlen(token) > 0) && (token[0] != COMMENT)) {
 							default_file.remove_threshold(STDERR);
-							while (token != NULL) {
+							do {
 								d_value = strtod(token, &end_ptr);
 								if (*end_ptr != '\0') {
 									throw AnalyzerException(27, token);
 								}
 								default_file.add_threshold(STDERR, d_value);
 								token = strtok(NULL, separator);
-							}
+							} while ((token != NULL) && (strlen(token) > 0) && (token[0] != COMMENT));
 						}
 					}
 				}
@@ -380,16 +374,16 @@ vector<File*>* Analyzer::process_script(const char* file_name, char file_separat
 						default_file.add_column(FREQLABEL, token);
 
 						token = strtok(NULL, separator);
-						if (token != NULL) {
+						if ((token != NULL) && (strlen(token) > 0) && (token[0] != COMMENT)) {
 							default_file.remove_threshold(FREQLABEL);
-							while (token != NULL) {
+							do {
 								d_value = strtod(token, &end_ptr);
 								if (*end_ptr != '\0') {
 									throw AnalyzerException(27, token);
 								}
 								default_file.add_threshold(FREQLABEL, d_value);
 								token = strtok(NULL, separator);
-							}
+							} while ((token != NULL) && (strlen(token) > 0) && (token[0] != COMMENT));
 						}
 					}
 				}
@@ -400,16 +394,16 @@ vector<File*>* Analyzer::process_script(const char* file_name, char file_separat
 						default_file.add_column(HWE_PVAL, token);
 
 						token = strtok(NULL, separator);
-						if (token != NULL) {
+						if ((token != NULL) && (strlen(token) > 0) && (token[0] != COMMENT)) {
 							default_file.remove_threshold(HWE_PVAL);
-							while (token != NULL) {
+							do {
 								d_value = strtod(token, &end_ptr);
 								if (*end_ptr != '\0') {
 									throw AnalyzerException(27, token);
 								}
 								default_file.add_threshold(HWE_PVAL, d_value);
 								token = strtok(NULL, separator);
-							}
+							} while ((token != NULL) && (strlen(token) > 0) && (token[0] != COMMENT));
 						}
 					}
 				}
@@ -420,16 +414,16 @@ vector<File*>* Analyzer::process_script(const char* file_name, char file_separat
 						default_file.add_column(CALLRATE, token);
 
 						token = strtok(NULL, separator);
-						if (token != NULL) {
+						if ((token != NULL) && (strlen(token) > 0) && (token[0] != COMMENT)) {
 							default_file.remove_threshold(CALLRATE);
-							while (token != NULL) {
+							do {
 								d_value = strtod(token, &end_ptr);
 								if (*end_ptr != '\0') {
 									throw AnalyzerException(27, token);
 								}
 								default_file.add_threshold(CALLRATE, d_value);
 								token = strtok(NULL, separator);
-							}
+							} while ((token != NULL) && (strlen(token) > 0) && (token[0] != COMMENT));
 						}
 					}
 				}
@@ -461,16 +455,16 @@ vector<File*>* Analyzer::process_script(const char* file_name, char file_separat
 						default_file.add_column(OEVAR_IMP, token);
 
 						token = strtok(NULL, separator);
-						if (token != NULL) {
+						if ((token != NULL) && (strlen(token) > 0) && (token[0] != COMMENT)) {
 							default_file.remove_threshold(OEVAR_IMP);
-							while (token != NULL) {
+							do {
 								d_value = strtod(token, &end_ptr);
 								if (*end_ptr != '\0') {
 									throw AnalyzerException(27, token);
 								}
 								default_file.add_threshold(OEVAR_IMP, d_value);
 								token = strtok(NULL, separator);
-							}
+							} while ((token != NULL) && (strlen(token) > 0) && (token[0] != COMMENT));
 						}
 					}
 				}
@@ -500,7 +494,7 @@ vector<File*>* Analyzer::process_script(const char* file_name, char file_separat
 					default_file.remove_threshold(MAF);
 
 					token = strtok(NULL, separator);
-					while (token != NULL) {
+					while ((token != NULL) && (strlen(token) > 0) && (token[0] != COMMENT))  {
 						d_value = strtod(token, &end_ptr);
 						if (*end_ptr != '\0') {
 							throw AnalyzerException(27, token);
@@ -513,7 +507,7 @@ vector<File*>* Analyzer::process_script(const char* file_name, char file_separat
 					default_file.remove_threshold(IMP);
 
 					token = strtok(NULL, separator);
-					while (token != NULL) {
+					while ((token != NULL) && (strlen(token) > 0) && (token[0] != COMMENT))  {
 						d_value = strtod(token, &end_ptr);
 						if (*end_ptr != '\0') {
 							throw AnalyzerException(27, token);
@@ -547,7 +541,7 @@ vector<File*>* Analyzer::process_script(const char* file_name, char file_separat
 					default_file.remove_threshold(SNP_HQ);
 
 					token = strtok(NULL, separator);
-					while (token != NULL) {
+					while ((token != NULL) && (strlen(token) > 0) && (token[0] != COMMENT)) {
 						d_value = strtod(token, &end_ptr);
 						if (*end_ptr != '\0') {
 							throw AnalyzerException(27, token);
@@ -591,8 +585,6 @@ vector<File*>* Analyzer::process_script(const char* file_name, char file_separat
 
 			cout << (*file_it)->get_file_name() << " " << (*file_it)->get_estimated_lines_count();
 			cout << " (" << execution_time << " sec )" << endl;*/
-
-			//TODO: throw exception if empty file?
 
 			check_separators(**file_it);
 			check_missing_value(**file_it);
@@ -664,20 +656,17 @@ int Analyzer::process_data(File& file) throw (AnalyzerException, FileException, 
 			separator = file.get_data_separator();
 
 			while (!ifile_stream.eof()) {
+				line_id += 1;
 				length = get_line(ifile_stream, line_buffer, LINE_BUFFER_SIZE);
 				if (length <= 0) {
 					if (!ifile_stream.eof()) {
-//						TODO: BEGIN. Add normal exception
-						cout << "Error: empty string in file." << endl;
-//						TODO: END.
+						throw AnalyzerException(30, line_id);
 					} else {
 						break;
 					}
 				}
 
 				column_id = 0;
-				line_id += 1;
-
 				cur = line_buffer;
 				token = qc_strtok(separator);
 				while (token != NULL) {
@@ -2175,7 +2164,7 @@ void Analyzer::print_result_html(File& file, vector<Plot*>* plots, const char* r
 	}
 }
 
-void Analyzer::print_summary_txt(vector<File*>& files, const char* o_file_name) throw (AnalyzerException) {
+/*void Analyzer::print_summary_txt(vector<File*>& files, const char* o_file_name) throw (AnalyzerException) {
 	vector<File*>::iterator files_it;
 	const char* output_prefix = NULL;
 	const char* file_extension = NULL;
@@ -2198,26 +2187,6 @@ void Analyzer::print_summary_txt(vector<File*>& files, const char* o_file_name) 
 
 			o_csvfile_name = (*files_it)->transform_output_name(output_prefix, CSV_EXTENSION);
 
-//			o_csvfile_name = (*files_it)->transform_file_abbreviation(output_prefix, CSV_EXTENSION);
-//			if (o_csvfile_name == NULL) {
-//				if ((file_extension != NULL) && ((sstrcmp(file_extension, TXT_EXTENSION) == 0) || (sstrcmp(file_extension, CSV_EXTENSION) == 0) ||
-//						(sstrcmp(file_extension, HTML_EXTENSION) == 0) || (sstrcmp(file_extension, HTM_EXTENSION) == 0))) {
-//					o_csvfile_name = (*files_it)->transform_file_name(output_prefix, CSV_EXTENSION, false);
-//				}
-//				else {
-//					o_csvfile_name = (*files_it)->transform_file_name(output_prefix, CSV_EXTENSION, true);
-//				}
-//			}
-
-/*			* OLD *
-			if ((file_extension != NULL) && ((sstrcmp(file_extension, TXT_EXTENSION) == 0) || (sstrcmp(file_extension, CSV_EXTENSION) == 0) ||
-					(sstrcmp(file_extension, HTML_EXTENSION) == 0) || (sstrcmp(file_extension, HTM_EXTENSION) == 0))) {
-				o_csvfile_name = (*files_it)->transform_file_name(output_prefix, CSV_EXTENSION, false);
-			}
-			else {
-				o_csvfile_name = (*files_it)->transform_file_name(output_prefix, CSV_EXTENSION, true);
-			}*/
-
 			o_summaryfile_stream << o_csvfile_name << endl;
 		}
 	} catch (ofstream::failure &e) {
@@ -2229,7 +2198,7 @@ void Analyzer::print_summary_txt(vector<File*>& files, const char* o_file_name) 
 	} catch (ofstream::failure &e) {
 		throw AnalyzerException(2, o_file_name);
 	}
-}
+}*/
 
 void Analyzer::print_boxplots_html(vector<Boxplot*>& boxplots, const char* file_name, const char* resource_path) throw (AnalyzerException) {
 	char* jscript = NULL;
@@ -3698,16 +3667,16 @@ void Analyzer::check_separators(File& file) throw (AnalyzerException, FileExcept
 	if (separator_name == NULL) {
 		throw AnalyzerException(7);
 	}
-	else if (strcmp(separator_name, COMMA) == 0) {
+	else if (sstrcmp(separator_name, COMMA) == 0) {
 		file.set_header_separator(separators[0]);
 	}
-	else if (strcmp(separator_name, TAB) == 0) {
+	else if (sstrcmp(separator_name, TAB) == 0) {
 		file.set_header_separator(separators[1]);
 	}
-	else if (strcmp(separator_name, WHITESPACE) == 0) {
+	else if (sstrcmp(separator_name, WHITESPACE) == 0) {
 		file.set_header_separator(separators[2]);
 	}
-	else if (strcmp(separator_name, SEMICOLON) == 0) {
+	else if (sstrcmp(separator_name, SEMICOLON) == 0) {
 		file.set_header_separator(separators[3]);
 	}
 	else {
@@ -3718,16 +3687,16 @@ void Analyzer::check_separators(File& file) throw (AnalyzerException, FileExcept
 	if (separator_name == NULL) {
 		throw AnalyzerException(9);
 	}
-	if (strcmp(separator_name, COMMA) == 0) {
+	if (sstrcmp(separator_name, COMMA) == 0) {
 		file.set_data_separator(separators[0]);
 	}
-	else if (strcmp(separator_name, TAB) == 0) {
+	else if (sstrcmp(separator_name, TAB) == 0) {
 		file.set_data_separator(separators[1]);
 	}
-	else if (strcmp(separator_name, WHITESPACE) == 0) {
+	else if (sstrcmp(separator_name, WHITESPACE) == 0) {
 		file.set_data_separator(separators[2]);
 	}
-	else if (strcmp(separator_name, SEMICOLON) == 0) {
+	else if (sstrcmp(separator_name, SEMICOLON) == 0) {
 		file.set_data_separator(separators[3]);
 	}
 	else {
@@ -3908,7 +3877,8 @@ void Analyzer::check_output_prefix(File& file) throw (AnalyzerException, FileExc
 /*
  * 	Description:
  * 		Estimates the number of lines in the input file. For the estimation uses
- * 		first CHECK_ROW_COUNT_FOR_SIZE non-empty file lines without header.
+ * 		CHECK_SAMPLE_COUNT_FOR_SIZE samples consisting of CHECK_ROW_COUNT_FOR_SIZE
+ * 		random file lines.
  *	Arguments:
  *		file 	-- file for estimation.
  */
@@ -3968,7 +3938,7 @@ void Analyzer::estimate_lines_count(File& file) throw (AnalyzerException) {
 	if (header_length < file_length) {
 		srand(time(NULL));
 
-		for (int j = 0; j < 100; j++) {
+		for (int j = 0; j < CHECK_SAMPLE_COUNT_FOR_SIZE; j++) {
 			for (int i = 0; i < CHECK_ROW_COUNT_FOR_SIZE; i++) {
 				location = (rand() % denominator) / (double)denominator;
 				current_pos = (int)(file_length * location);

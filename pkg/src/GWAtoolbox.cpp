@@ -334,7 +334,7 @@ SEXP QC_common_plot(SEXP external_pointer, SEXP resource_path) {
 		start_time = clock();
 
 		analyzer.print_result_html(*files, boxplots, c_resource_path);
-		analyzer.print_summary_txt(*files, Analyzer::SUMMARY_FILE);
+		/*analyzer.print_summary_txt(*files, Analyzer::SUMMARY_FILE);*/
 
 		end_time = clock();
 		execution_time = (end_time - start_time)/(double)CLOCKS_PER_SEC;
@@ -1765,8 +1765,6 @@ int main(int args, char** argv) {
 	char fileSep = '\\';
 	const char* resLocation = "inst\\extdata\\";
 
-	double* data = NULL;
-
 	try {
 		Analyzer analyzer;
 
@@ -1798,7 +1796,7 @@ int main(int args, char** argv) {
 
  		cout << "Creating main report... " << endl;
 		analyzer.print_result_html(*files, boxplots, resLocation);
-		analyzer.print_summary_txt(*files, Analyzer::SUMMARY_FILE);
+		/*analyzer.print_summary_txt(*files, Analyzer::SUMMARY_FILE);*/
 		cout << "Done." << endl;
 
 		for (file_it = files->begin(); file_it != files->end(); file_it++) {

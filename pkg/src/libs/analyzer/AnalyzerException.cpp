@@ -49,7 +49,8 @@ const char* AnalyzerException::MESSAGES[] = {
 /*26*/	"The output prefix (PREFIX) is not specified for the file: ",
 /*27*/	"Failed to convert the string into a numeric value: ",
 /*28*/	"Missing column(s) in the file row: ",
-/*29*/	"Too many columns in the file row: "
+/*29*/	"Too many columns in the file row: ",
+/*30*/	"The empty file row has been detected: "
 };
 
 AnalyzerException::AnalyzerException(int message):

@@ -15,8 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with GWAtoolbox.  If not, see <http://www.gnu.org/licenses/>.
 
-kusk_check <- function(summary_file, worst, plot) {
-	summary_file <- as.character(summary_file)
+kusk_check <- function(script, worst = c(50, 75, 90, 99, 100), plot = TRUE) {
+	script <- as.character(script)
 
 	if (!is.vector(worst, mode="numeric")) {
 		stop("Argument 'worst' must be a non-emtpy vector of integer values in (100, 99, 90, 75, 50).")
@@ -33,19 +33,68 @@ kusk_check <- function(summary_file, worst, plot) {
 		stop("Argument 'plot' must be a logical.")
 	}
 
-    filelist <- scan(summary_file, what="character", quiet=TRUE)
-	f <- length(filelist)
-	if (f <= 0) {
-		stop("File '", summary_file, "' is empty.\n")
-	}
+#   filelist <- scan(script, what="character", quiet=TRUE)
+#	f <- length(filelist)
+#	if (f <= 0) {
+#		stop("File '", script, "' is empty.\n")
+#	}
 
+	file_separator <- NA
+	if (.Platform$OS.type == "windows") {
+		file_separator <- "\\"
+	}
+	else {
+		file_separator <- .Platform$file.sep
+	}
+	
+	metal <- scan(script, what="character", sep="\n", quiet=T)
+	
+	prefix <- metal[grepl("^\\s*PREFIX\\s+[[:graph:]]+", metal, ignore.case=T)]
+	if (length(prefix) <= 0) {
+		stop("File '", script, "' does not contain valid PREFIX command.\n")
+	} 
+	else if (length(prefix) > 1) {
+		stop("File '", script, "' contains more than two valid PREFIX commands.\n")
+	}
+	r <- regexpr("PREFIX\\s+[[:graph:]]+", prefix, ignore.case=T)
+	prefix <- substr(prefix, r, r + attr(r, "match.length") - 1)
+	prefix <- strsplit(prefix, split="\\s+")[[1]][2]
+	
+	process <- metal[grepl("^\\s*PROCESS\\s+([[:graph:]]+)(\\s+[[:graph:]]+)?", metal, ignore.case=T)]
+	if (length(process) <= 1) {
+		stop("File '", script,"' does not contain any valid PROCESS command.\n")
+	}
+	r <- regexpr("PROCESS\\s+([[:graph:]]+)(\\s+[[:graph:]]+)?", process, ignore.case=T)
+	process <- substr(process, r, r + attr(r, "match.length") - 1)
+	
+	files <- data.frame(full_name = rep(NA, length(process)), short_name=rep(NA, length(process)), output_name=rep(NA, length(process)))
+	for (i in 1:length(process)) {
+		tokens <- strsplit(process[i], split="\\s+")[[1]]
+		
+		files$full_name[i] <- tokens[2]
+		if (length(tokens) >= 3) {
+			files$short_name[i] <- tokens[3]
+			files$output_name[i] <- paste(prefix, files$short_name[i], ".csv", sep="")
+		}
+		else {
+			files$output_name[i] <- tail(strsplit(files$full_name[i], split=file_separator, fixed=T)[[1]], 1)
+			if (grepl("(\\.csv|\\.txt|\\.html|\\.htm)$", files$output_name[i], ignore.case=T)) {
+				files$output_name[i] <- sub("(\\.csv|\\.txt|\\.html|\\.htm)$", "", files$output_name[i], ignore.case=T)
+			}
+			files$output_name[i] <- paste(prefix, files$output_name[i], ".csv", sep="")	
+		}
+	}
+	
 	names <- c("study", c( rbind( paste(rep("sk", w), worst, sep="") , paste(rep("ku", w), worst, sep="") ))) 
 	data <- data.frame(rbind(rep(NA, 2 * w + 1)), stringsAsFactors=F)
 	names(data) <- names
 
-	for (i in 1:f) {
-		x <- read.table( filelist[i], sep=";", header=T, stringsAsFactors=F)
-		data[i, 1] <- filelist[i]
+	for (i in 1:nrow(files)) {
+		x <- read.table(files$output_name[i], sep=";", header=T, stringsAsFactors=F)
+		data[i, 1] <- files$output_name[i]	
+#	for (i in 1:f) {
+#		x <- read.table(filelist[i], sep=";", header=T, stringsAsFactors=F)
+#		data[i, 1] <- filelist[i]
 		for (j in 1:w) {
 			if (worst[j] == 100) {
 				data[i, 2*j] <- x$STD_EFFECT_1[9]

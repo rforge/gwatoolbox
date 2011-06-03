@@ -137,7 +137,9 @@ public:
 	static const char* MISSED;
 	static const int CHECK_ROW_COUNT_FOR_SEPARATOR;
 	static const int CHECK_ROW_COUNT_FOR_SIZE;
+	static const int CHECK_SAMPLE_COUNT_FOR_SIZE;
 	static const int SEPARATORS_SIZE;
+	static const char COMMENT;
 	static const char separators[];
 
 	/* Commands */
@@ -187,10 +189,12 @@ public:
 	static const char* CONTENT_STYLE;
 	static const char* MENU_STYLE;
 	static const char* JSCRIPT;
+
+	/* Output file names */
 	static const char* MENU_FILE;
 	static const char* MAIN_FILE;
 	static const char* BOXPLOTS_FILE;
-	static const char* SUMMARY_FILE;
+	/*static const char* SUMMARY_FILE;*/
 
 	/* File extentions */
 	static const char* TXT_EXTENSION;
@@ -210,7 +214,7 @@ public:
 	void print_result_csv(File& file) throw (AnalyzerException, FileException);
 	void print_result_html(File& file, vector<Plot*>* plots, const char* resource_path) throw (AnalyzerException, FileException);
 	void print_result_html(vector<File*>& files, vector<Boxplot*>* boxplots, const char* resource_path) throw (AnalyzerException, FileException);
-	void print_summary_txt(vector<File*>& files, const char* o_file_name) throw (AnalyzerException);
+	/*void print_summary_txt(vector<File*>& files, const char* o_file_name) throw (AnalyzerException);*/
 };
 
 #endif
