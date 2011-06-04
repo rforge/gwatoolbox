@@ -257,7 +257,7 @@ vector<File*>* Analyzer::process_script(const char* file_name, char file_separat
 						new_file = new File(token, default_file, file_separator);
 
 						token = strtok(NULL, separator);
-						if (token != NULL) {
+						if ((token != NULL) && (strlen(token) > 0) && (token[0] != COMMENT)) {
 							new_file->set_abbreviation(token);
 							new_file->set_output_name(token);
 						}
