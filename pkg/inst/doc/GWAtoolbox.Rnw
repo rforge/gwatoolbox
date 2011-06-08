@@ -588,55 +588,132 @@ The labels "first" and "second" will be used to label the two studies in the plo
 \end{example}
 
 \section{The Output Files}
-The typical output of the \emph{gwasqc()} function includes the following files:
+The typical output of the \emph{gwasqc()} function consists of the following files:
 \begin{enumerate}
-\item \textbf{Graphical files} (\emph{PNG} extention) -- several files per study.
-These files include \textbf{histograms} and \textbf{boxplots} of the distribution of the main statistics from each GWAS file: effect estimates, imputation quality index, sample size, p-value, allele frequency; 
+\item \textbf{Graphical files} (\emph{PNG} file extension) include \textbf{histograms} and \textbf{boxplots} of the distribution of the main statistics from each GWAS file: effect estimates, imputation quality index, sample size, p-value, allele frequency; 
 \textbf{QQ-plots} of the p-value distribution are also provided to investigate the presence of study-design bias.
 See Figure \ref{fig:plots} for an exhaustive list of available plots.
-\item \textbf{Textual report file} (\emph{TXT} extention) -- one file per study.
-This file contains information on the GWAS file-format quality and statistics summarizing the distribution of all fields present in the GWAS files (effect estimates, p-values, etc.).
-The statistics reported in the textual output file can be compared with the graphical output described above.
-\item \textbf{Comma separated report file} (\emph{CSV} extention) -- one file per study.
-This file contains statistics limited to the high quality SNPs, as they have been defined by the user when setting the parameter \textbf{HQ\_SNP}\index{HQ\_SNP} in the QC script (see Section \ref{section:hq_data_filter}).
+\item \textbf{Textual report} (\emph{TXT} file extension) contains information on the GWAS file-format quality and statistics summarizing the distribution of all fields present in the GWAS files (effect estimates, p-values, etc.).
+The statistics provided in this report can be compared with the graphical output described above.
+\item \textbf{Comma separated report} (\emph{CSV} file extension) contains statistics limited to the high quality SNPs, as they have been defined by the user when setting the parameter \textbf{HQ\_SNP}\index{HQ\_SNP} in the QC script (see Section \ref{section:hq_data_filter}).
 The tabular format of this file is intended to be useful for users who wants to perform additional analyses and compare results from different GWAS files without having to manage large original GWAS files.
 Figure \ref{fig:csv_report_file} shows an example of such file.
-
 \begin{figure}[!h]
 \begin{center}
-\scalebox{0.5}{
-\noindent\makebox[\textwidth]{
-\begin{tabular}{|l|l|l|l|l|l|l|l|l|l|l|l|l|l|l|}
+\tiny
+%\scalebox{0.5}{
+%\noindent\makebox[\textwidth]{
+%\begin{tabular}{|l|l|l|l|l|l|l|l|l|l|l|l|l|l|l|}
+%\hline
+%& N & EFFECT & STDERR & PVALUE & MAF & IMPUTED & IMP\_QUALITY & CALLRATE & HWE\_PVAL & STD\_EFFECT\_0.5 & STD\_EFFECT\_0.75 & STD\_EFFECT\_0.95 & STD\_EFFECT\_0.99 & STD\_EFFECT\_1 \\
+%\hline
+%N & 2543887 & 2542617 & 2542422 & 2542617 & 2543887 & 2543887 & 2543887 & 2543887 & NA & NA & NA & NA & NA & NA \\
+%\hline
+%N\_HQ & 2448544 & 2448544 & 2448544 & 2448544 & 2448544 & 2448544 & 2448544 & 2448544 & NA & NA & NA & NA & NA & NA \\
+%\hline
+%N\_NAs & 0 & 1270 & 1270 & 1270 & 0 & 0 & 0 & 0 & NA & NA & NA & NA & NA & NA \\
+%\hline
+%Mean & 516 & -0.00137 & 0.295076 & 0.500823 & 0.230416 & 1 & 0.958868 & 1 & NA & NA & NA & NA & NA & NA \\
+%\hline
+%StdDev & 0 & 0.333379 & 0.158119 & 0.28873 & 0.143312 & 0 & 0.097734 & 0 & NA & NA & NA & NA & NA & NA \\
+%\hline
+%Min & 516 & -8.76038 & 0.17353 & 7.34E-08 & 0.010001 & 1 & 0.300006 & 1 & NA & NA & NA & NA & NA & NA \\
+%\hline
+%Max & 516 & 6.12165 & 2.53341 & 1 & 0.5 & 1 & 1.0467 & 1 & NA & NA & NA & NA & NA & NA \\
+%\hline
+%Median & 516 & -0.00149 & 0.233707 & 0.502629 & 0.217008 & 1 & 0.994577 & 1 & NA & NA & NA & NA & NA & NA \\
+%\hline
+%Skewness & nan & -0.06933 & 2.886758 & -0.00935 & 0.214034 & nan & -3.90226 & nan & NA & -0.00587 & -0.01036 & 0.022903 & 0.040024 & -0.07186 \\
+%\hline
+%Kurtosis & nan & 9.109873 & 11.14145 & -1.20085 & -1.18454 & nan & 16.76683 & nan & NA & 3.297394 & 3.822136 & 4.712606 & 5.861049 & 9.066722 \\
+%\hline
+%\end{tabular}}
+%}
+\begin{tabular}{|l|p{1.8cm}|p{1.8cm}|p{1.8cm}|p{1.8cm}|p{1.8cm}|}
 \hline
-& N & EFFECT & STDERR & PVALUE & MAF & IMPUTED & IMP\_QUALITY & CALLRATE & HWE\_PVAL & STD\_EFFECT\_0.5 & STD\_EFFECT\_0.75 & STD\_EFFECT\_0.95 & STD\_EFFECT\_0.99 & STD\_EFFECT\_1 \\
+& N & EFFECT & STDERR & PVALUE & MAF \\
 \hline
-N & 2543887 & 2542617 & 2542422 & 2542617 & 2543887 & 2543887 & 2543887 & 2543887 & NA & NA & NA & NA & NA & NA \\
+N & 2543887 & 2542617 & 2542422 & 2542617 & 2543887 \\
 \hline
-N\_HQ & 2448544 & 2448544 & 2448544 & 2448544 & 2448544 & 2448544 & 2448544 & 2448544 & NA & NA & NA & NA & NA & NA \\
+N\_HQ & 2448544 & 2448544 & 2448544 & 2448544 & 2448544 \\
 \hline
-N\_NAs & 0 & 1270 & 1270 & 1270 & 0 & 0 & 0 & 0 & NA & NA & NA & NA & NA & NA \\
+N\_NAs & 0 & 1270 & 1270 & 1270 & 0 \\
 \hline
-Mean & 516 & -0.00137 & 0.295076 & 0.500823 & 0.230416 & 1 & 0.958868 & 1 & NA & NA & NA & NA & NA & NA \\
+Mean & 516 & -0.00137 & 0.295076 & 0.500823 & 0.230416 \\
 \hline
-StdDev & 0 & 0.333379 & 0.158119 & 0.28873 & 0.143312 & 0 & 0.097734 & 0 & NA & NA & NA & NA & NA & NA \\
+StdDev & 0 & 0.333379 & 0.158119 & 0.28873 & 0.143312 \\
 \hline
-Min & 516 & -8.76038 & 0.17353 & 7.34E-08 & 0.010001 & 1 & 0.300006 & 1 & NA & NA & NA & NA & NA & NA \\
+Min & 516 & -8.76038 & 0.17353 & 7.34E-08 & 0.010001 \\
 \hline
-Max & 516 & 6.12165 & 2.53341 & 1 & 0.5 & 1 & 1.0467 & 1 & NA & NA & NA & NA & NA & NA \\
+Max & 516 & 6.12165 & 2.53341 & 1 & 0.5 \\
 \hline
-Median & 516 & -0.00149 & 0.233707 & 0.502629 & 0.217008 & 1 & 0.994577 & 1 & NA & NA & NA & NA & NA & NA \\
+Median & 516 & -0.00149 & 0.233707 & 0.502629 & 0.217008 \\
 \hline
-Skewness & nan & -0.06933 & 2.886758 & -0.00935 & 0.214034 & nan & -3.90226 & nan & NA & -0.00587 & -0.01036 & 0.022903 & 0.040024 & -0.07186 \\
+Skewness & nan & -0.06933 & 2.886758 & -0.00935 & 0.214034 \\
 \hline
-Kurtosis & nan & 9.109873 & 11.14145 & -1.20085 & -1.18454 & nan & 16.76683 & nan & NA & 3.297394 & 3.822136 & 4.712606 & 5.861049 & 9.066722 \\
+Kurtosis & nan & 9.109873 & 11.14145 & -1.20085 & -1.18454 \\
 \hline
-\end{tabular}}
-}
+\end{tabular}
+
+\vspace{0.2cm}
+
+\begin{tabular}{|l|p{1.8cm}|p{1.8cm}|p{1.8cm}|p{1.8cm}|p{1.8cm}|}
+\hline
+& IMPUTED & IMP\_QUALITY & CALLRATE & HWE\_PVAL & STD\_EFFECT\_0.5 \\
+\hline
+N & 2543887 & 2543887 & 2543887 & NA & NA \\
+\hline
+N\_HQ & 2448544 & 2448544 & 2448544 & NA & NA \\
+\hline
+N\_NAs & 0 & 0 & 0 & NA & NA \\
+\hline
+Mean & 1 & 0.958868 & 1 & NA & NA \\
+\hline
+StdDev & 0 & 0.097734 & 0 & NA & NA \\
+\hline
+Min & 1 & 0.300006 & 1 & NA & NA \\
+\hline
+Max & 1 & 1.0467 & 1 & NA & NA \\
+\hline
+Median & 1 & 0.994577 & 1 & NA & NA \\
+\hline
+Skewness & nan & -3.90226 & nan & NA & -0.00587 \\
+\hline
+Kurtosis & nan & 16.76683 & nan & NA & 3.297394 \\
+\hline
+\end{tabular}
+
+\vspace{0.2cm}
+
+\begin{tabular}{|l|p{1.8cm}|p{1.8cm}|p{1.8cm}|p{1.8cm}|}
+\hline
+& STD\_EFFECT\_0.75 & STD\_EFFECT\_0.95 & STD\_EFFECT\_0.99 & STD\_EFFECT\_1 \\
+\hline
+N & NA & NA & NA & NA \\
+\hline
+N\_HQ & NA & NA & NA & NA \\
+\hline
+N\_NAs & NA & NA & NA & NA \\
+\hline
+Mean & NA & NA & NA & NA \\
+\hline
+StdDev & NA & NA & NA & NA \\
+\hline
+Min & NA & NA & NA & NA \\
+\hline
+Max & NA & NA & NA & NA \\
+\hline
+Median & NA & NA & NA & NA \\
+\hline
+Skewness & -0.01036 & 0.022903 & 0.040024 & -0.07186 \\
+\hline
+Kurtosis & 3.822136 & 4.712606 & 5.861049 & 9.066722 \\
+\hline
+\end{tabular}
 \caption{The comma separated report file.}
 \label{fig:csv_report_file}
 \end{center}
 \end{figure}
-
 For each of the variables listed by columns, summary statistics are reported by row.
 Specifically:
 \begin{itemize}
@@ -645,7 +722,6 @@ Specifically:
 \item \textbf{N\_NAs} -- number of SNPs with missing values for the specific field of interest.
 \item \textbf{Mean}, \textbf{StdDev}, \textbf{Min}, \textbf{Max}, \textbf{Median}, \textbf{Skewness}, and \textbf{Kurtosis} are referred to the distribution of the specific field.
 \end{itemize}
-
 Columns include:
 \begin{itemize}
 \item \textbf{N} -- study sample size.
@@ -654,21 +730,9 @@ Columns include:
 \item \textbf{STD\_EFFECT\_0.5}, \textbf{STD\_EFFECT\_0.75}, \textbf{STD\_EFFECT\_0.95}, \textbf{STD\_EFFECT\_0.99}, \textbf{STD\_EFFECT\_1} -- these columns are only of interest for the reported skewness and kurtosis of the standardized effect estimates.
 The numbers 0.5, 0.75, 0.95, 0.99, and 1 are referred to the percentage of SNPs with the highest p-values chosen to study the effect size distribution (see Section \ref{section:comparing_skewness_and_kurtosis_of_effect_size_distribution} for additional details).
 \end{itemize}
-
-\item \textbf{An HTML document}, that combines both textual and graphical output, allowing the user to easily surfing across the results and across the studies included in the QC analysis.
+\item \textbf{An HTML report} (\emph{main.html} file) combines both textual and graphical output, allowing the user to easily surfing across the results and across the studies included in the QC analysis.
 In operating systems allowing graphical interfaces, the \emph{HTML} document should be the first file to be opened to investigate the results.
-\item \textbf{A summary file} (\emph{summary.txt}) which lists the names of the comma separated report files produced by the QC analysis.
-This file is meant to be employed in the additional analyses described in Sections \ref{section:comparing_skewness_and_kurtosis_of_effect_size_distribution} and \ref{section:effect_estimates_precision_by_sample_size}, and is thought to simplify the post-QC data management.
-
 \end{enumerate}
-
-%The \emph{GWAtoolbox} package produces four types of files:
-%\begin{enumerate}
-%\item Figures with QQ-plots, histograms and boxplots (see Figure \ref{fig:plots} for all employed input columns and filters).
-%\item Textual report file with \emph{.txt} extension.
-%\item Comma separated file with \emph{.csv} extension, that contains statistics for the high quality imputation data (see Section \ref{section:hq_data_filter}).
-%\item The \emph{HTML} document, that combines both textual output and figures.
-%\end{enumerate}
 
 \section{Example}
 This is an embedded R code example. All input files of this example are located in the subdirectory \emph{doc} of the installed \emph{GWAtoolbox} package.
@@ -744,29 +808,30 @@ Outlier studies, that have been identified in the 50\% scatterplot, are colored 
 \label{fig:kusk_check}
 \end{figure} 
 
-This diagnostic is available in \emph{GWAtoolbox} through the \emph{kusk\_check()} function.
-The working directory should be the same where files generated by the \emph{gwasqc()} have been stored.
-\emph{kusk\_check()} requires the name of the summary file (typically \emph{summary.txt}) and an integer number included between 50, 75, 95, 99, and 100, which corresponds to the percentage of SNPs to be considered as representing the null distribution, starting from the worst p-value.
-The number 100 has been included to give the user the possibility to check the full set of results.
-Results of the \emph{kusk\_check()} function are the skewness vs. kurtosis scatterplot and a dataset with all skewness and kurtosis values from all studies, to allow the user additional investigation and replotting.
+The \emph{GWAtoolbox} allows automatic comparison of skewness and kurtosis of effect size distribution between GWA stuties.
+The \emph{gwasqc()} function estimates the corresponding skewness and kurtosis values during the quality check and includes them into the \emph{CSV} reports. 
+Then, the auxiliary \emph{kusk\_check()} function can be used to export this information to the \emph{R} data frame and to produce the diagnostic plots.
+As input it requires the same script as \emph{gwasqc()} function and assumes that all the \emph{CSV} reports are in the current working directory.
+Additionally, an optional list consisting of any of integer numbers  50, 75, 95, 99, and 100 can be specified.
+The numbers correspond to the percentage of SNPs to be considered as representing the null distribution.
 
 \begin{example}
 In this example we report the commands to obtain the scatterplot shown in Figure \ref{fig:kusk_check}, when the 50\% SNPs with largest p-values are considered. 
 It can be seen that, currently, no automatic method to identify outlier studies is implemented and that the user needs to define his/her own criteria.
 <<results=hide>>=
 library(GWAtoolbox)
-W <- kusk_check("GWASQC_script.txt", worst=50, T)
-points(W$sk50,W$ku50, pch=22, bg="orange", cex=2)
-points(W$sk50[W$ku>5],W$ku50[W$ku>5], pch=22, bg=2, cex=2)
-text(W$sk50[W$ku>5],W$ku50[W$ku>5]-5, lab=W$study[W$ku>5], cex=1)
+W <- kusk_check("GWASQC_script.txt", worst = c(50), plot = TRUE)
+points(W$sk50, W$ku50, pch = 22, bg = "orange", cex = 2)
+points(W$sk50[W$ku > 5],W$ku50[W$ku > 5], pch = 22, bg = 2, cex = 2)
+text(W$sk50[W$ku > 5],W$ku50[W$ku > 5] - 5, lab = W$study[W$ku > 5], cex = 1)
 @
 \end{example} 
 
 \subsection{Effect estimates precision by sample size}
 \label{section:effect_estimates_precision_by_sample_size}
-A different graphical test to compare studies each other is based on the assessment of the distribution of estimates' precision vs. the study sample size.
+A different graphical test to compare studies against each other is based on the assessment of the distribution of estimates' precision vs. the study sample size.
 In general, the average $SE(\theta)$ should be inversely proportional to the study sample size.
-The function \emph{dispersion\_check()} simply plots a scatterplot of the $mean(SE(\theta))$ vs. the median sample size of all studies, as depicted in the example Figure \ref{fig:dispersion_check}.
+The auxiliary \emph{dispersion\_check()} function simply plots a scatterplot of the $mean(SE(\theta))$ vs. the median sample size of all studies, as depicted in the example Figure \ref{fig:dispersion_check}.
 Over-dispersion is defined as the presence of larger SEs than expected given the sample size of the study and under-dispersion is meant to be the opposite phenomenon.
 For example, a study with unmodeled relatedness or population stratification may present SEs that are smaller than another study of similar sample size where these issues were accounted for properly. 
 \begin{figure}[!h]
@@ -776,15 +841,24 @@ For example, a study with unmodeled relatedness or population stratification may
 \label{fig:dispersion_check}
 \end{figure} 
 
-The \emph{dispersion\_check()} function is based on the same summary file (i.e \emph{summary.txt}) used for the \emph{kusk\_check()} function.
-Given that the study sample size is a parameter that could be missing from GWAS files, the function require manual entry of a vector with all study sample sizes.
-Output consists of a dispersion plot and of a dataset that can be used fo additional investigation.
+The \emph{dispersion\_check()} function uses \emph{CSV} reports generated by \emph{gwasqc()} function.
+As input it requires the same script as \emph{gwasqc()} function and assumes that all the reports are in the current working directory.
+If the study sample size is missing from GWAS files, then the function has an optional parameter allowing to specify a vector with all study sample sizes.
+The function returns an \emph{R} data frame with the information extracted from the \emph{CSV} reports and produces the diagnostic plot.
+
 \begin{example}
-In this example we report the commands to obtain the scatterplot shown in Figure \ref{fig:kusk_check}, when the 50\% SNPs with largest p-values are considered. 
-It can be seen that, currently, no automatic method to identify outlier studies is implemented and that the user needs to define his/her own criteria.
 <<results=hide>>=
 library(GWAtoolbox)
-Z <- dispersion_check("GWASQC_script.txt", plot=T)
+Z <- dispersion_check("GWASQC_script.txt", plot=TRUE)
+@
+<<>>=
+Z
+@
+<<results=hide>>=
+text(Z$median_n, Z$mean_se, Z$study) # Add study labels
+@
+<<results=hide>>=
+Z <- dispersion_check("GWASQC_script.txt", sample_sizes=c(3000, 2000), plot=TRUE)
 @
 <<>>=
 Z

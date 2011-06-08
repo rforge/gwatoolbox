@@ -114,7 +114,7 @@ dispersion_check <- function(script, sample_sizes = NULL, plot = TRUE) {
 
 	if (plot) {
 		par(mfrow = c(1, 1))
-		plot(data$median_n, data$mean_se, xlab = "Sample Size", ylab = "Standard Error", col = "black", pch = 20, cex = 1)
+		plot(data$median_n, data$mean_se, xlab = "Sample Size", ylab = "Mean of SE(beta)", col = "black", pch = 20, cex = 1)
 	}
 
 	return(data)
