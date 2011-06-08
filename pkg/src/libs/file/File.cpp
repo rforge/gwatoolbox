@@ -22,14 +22,14 @@
 File::File():
 	file_name(NULL), file_path(NULL), full_path(NULL), abbreviation(NULL),
 	output_prefix(NULL), output_name(NULL), file_separator('\0'), case_sensitive(false),
-	estimated_lines_count(0), columns(compare), properties(compare), thresholds(compare) {
+	columns(compare), properties(compare), thresholds(compare), estimated_lines_count(0) {
 
 }
 
 File::File(const char* path, char file_sep) throw (FileException):
 	file_name(NULL), file_path(NULL), full_path(NULL), abbreviation(NULL),
 	output_prefix(NULL), output_name(NULL), file_separator(file_sep), case_sensitive(false),
-	estimated_lines_count(0), columns(compare), properties(compare), thresholds(compare) {
+	columns(compare), properties(compare), thresholds(compare), estimated_lines_count(0) {
 
 	if (path == NULL) {
 		throw FileException(1, NULL, "File(const char* path)", "path", "NULL");
@@ -45,7 +45,7 @@ File::File(const char* path, char file_sep) throw (FileException):
 File::File(const char* path, File& file, char file_sep) throw (FileException):
 	file_name(NULL), file_path(NULL), full_path(NULL), abbreviation(NULL),
 	output_prefix(NULL), output_name(NULL), file_separator(file_sep), case_sensitive(false),
-	estimated_lines_count(0), columns(compare), properties(compare), thresholds(compare) {
+	columns(compare), properties(compare), thresholds(compare), estimated_lines_count(0) {
 
 	if (path == NULL) {
 		throw FileException(1, NULL, "File(const char* path, File& file)", "path", "NULL");
