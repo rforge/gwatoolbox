@@ -49,9 +49,8 @@
 	
 	# run kusk_check() function
 	W <- kusk_check("GWASQC_script.txt", worst = c(50), plot = TRUE)
-	points(W$sk50, W$ku50, pch = 22, bg = "orange", cex = 2)
-	points(W$sk50[W$ku > 5],W$ku50[W$ku > 5], pch = 22, bg = 2, cex = 2)
-	text(W$sk50[W$ku > 5],W$ku50[W$ku > 5] - 5, lab = W$study[W$ku > 5], cex = 1)
+	points(W$sk50[W$ku50 > 5], W$ku50[W$ku50 > 5], pch = 22, bg = 2, cex = 2)
+	text(W$sk50[W$ku50 > 5], W$ku50[W$ku50 > 5], lab = W$study[W$ku50 > 5], cex = 1, pos = 4)
 
 	\dontshow{
 	# restore previous workspace

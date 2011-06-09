@@ -26,10 +26,15 @@ PREFIX	res_
 BOXPLOTWIDTH	N
 
 # Input file and its short name for plotting
-PROCESS gwa_data_example_1.tbl first
-
+PROCESS gwa_data_example_1.txt Study1
 
 PVALUE		p
 STDERR		StdErr
 
-PROCESS gwa_data_example_2.csv second
+PROCESS gwa_data_example_2.tbl Study2
+PROCESS gwa_data_example_3.csv Study3
+
+PVALUE		pvalue
+
+PROCESS gwa_data_example_4.txt Study4
+PROCESS gwa_data_example_5.csv Study5

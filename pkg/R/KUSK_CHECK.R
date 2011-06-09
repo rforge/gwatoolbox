@@ -91,7 +91,12 @@ kusk_check <- function(script, worst = c(50, 75, 90, 99, 100), plot = TRUE) {
 
 	for (i in 1:nrow(files)) {
 		x <- read.table(files$output_name[i], sep=";", header=T, stringsAsFactors=F)
-		data[i, 1] <- files$output_name[i]	
+		if (!is.na(files$short_name[i])) {
+			data[i, 1] <- files$short_name[i]	
+		}
+		else {
+			data[i, 1] <- files$output_name[i]	
+		}
 #	for (i in 1:f) {
 #		x <- read.table(filelist[i], sep=";", header=T, stringsAsFactors=F)
 #		data[i, 1] <- filelist[i]
@@ -133,7 +138,7 @@ kusk_check <- function(script, worst = c(50, 75, 90, 99, 100), plot = TRUE) {
 		for (i in 1:w) {
 			plot(data[, 2 * i], data[, 2 * i + 1], type = "n", xlim = c(-max.sk, max.sk), ylim = c(-max.ku, max.ku), main = paste(worst[i], "%", sep=""), xlab = "Skewness", ylab = "Kurtosis")
 			abline(h=0, v=0, lwd = 2)
-			points(data[, 2 * i], data[, 2 * i + 1], bg=c("darkred", "red", "pink", "orange", "yellow")[i], pch = 22, cex = 1)		               			
+			points(data[, 2 * i], data[, 2 * i + 1], bg="orange", pch = 22, cex = 2)		               			
 		}
 
 		par(mfrow = c(1, 1))		

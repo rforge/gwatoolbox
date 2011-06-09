@@ -92,7 +92,12 @@ dispersion_check <- function(script, sample_sizes = NULL, plot = TRUE) {
 	if (!is.null(sample_sizes)) {
 		for (i in 1:nrow(files)) {
 			x <- read.table(files$output_name[i], sep=";", header=T, stringsAsFactors=F)
-			data[i, 1] <- files$output_name[i]
+			if (!is.na(files$short_name[i])) {
+				data[i, 1] <- files$short_name[i]
+			}
+			else {
+				data[i, 1] <- files$output_name[i]
+			}
 #		for (i in 1:f) {
 #			x <- read.table(filelist[i], sep=";", header=T, stringsAsFactors=F)
 #			data[i, 1] <- filelist[i]	
@@ -103,7 +108,12 @@ dispersion_check <- function(script, sample_sizes = NULL, plot = TRUE) {
 	else {
 		for (i in 1:nrow(files)) {
 			x <- read.table(files$output_name[i], sep=";", header=T, stringsAsFactors=F)
-			data[i, 1] <- files$output_name[i]
+			if (!is.na(files$short_name[i])) {
+				data[i, 1] <- files$short_name[i]
+			}
+			else {
+				data[i, 1] <- files$output_name[i]
+			}
 #		for (i in 1:f) {
 #			x <- read.table(filelist[i], sep=";", header=T, stringsAsFactors=F)
 #			data[i, 1] <- filelist[i]
@@ -114,7 +124,7 @@ dispersion_check <- function(script, sample_sizes = NULL, plot = TRUE) {
 
 	if (plot) {
 		par(mfrow = c(1, 1))
-		plot(data$median_n, data$mean_se, xlab = "Sample Size", ylab = "Mean of SE(beta)", col = "black", pch = 20, cex = 1)
+		plot(data$median_n, data$mean_se, xlab = "Sample Size", ylab = "Mean of SE(beta)", bg = "orange", pch = 22, cex = 2)
 	}
 
 	return(data)

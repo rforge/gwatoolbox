@@ -737,18 +737,20 @@ In operating systems allowing graphical interfaces, the \emph{HTML} document sho
 \section{Example}
 This is an embedded R code example. All input files of this example are located in the subdirectory \emph{doc} of the installed \emph{GWAtoolbox} package.
 
-Consider the two GWAS data files: \emph{gwa\_data\_example\_1.tbl} and \emph{gwa\_data\_example\_2.csv}. 
-The first file contains 16 columns separated with tabulation:
+Consider the following five GWAS data files: \emph{gwa\_data\_example\_1.txt}, \emph{gwa\_data\_example\_2.tbl}, \emph{gwa\_data\_example\_3.csv}, \emph{gwa\_data\_example\_4.txt} and \emph{gwa\_data\_example\_5.csv}. 
+The first file contains 16 columns separated with whitespace:
 <<>>=
-t <- read.table("gwa_data_example_1.tbl", header = T, nrow = 1, sep = "\t")
+t <- read.table("gwa_data_example_1.txt", header = T, nrow = 1, sep = " ")
 colnames(t)
 @
-At the same time, the second file also contains 16 columns, however separated with comma:
+At the same time, the second file also contains 16 columns, however separated with tabulation:
 <<>>=
-t <- read.table("gwa_data_example_2.csv", header = T, nrow = 1, sep = ",")
+t <- read.table("gwa_data_example_2.tbl", header = T, nrow = 1, sep = "\t")
 colnames(t)
 @
-In order to perform the quality control check of these two files with \emph{GWAtoolbox} package, we prepare a simple input script \emph{GWAS\_script.txt}. Below are listed commands, which were inlcuded in the script:
+Analogously, we can preview the headers of the other three files.
+Then, in order to perform the quality control check of these files with \emph{GWAtoolbox} package, we prepare a simple input script \emph{GWAS\_script.txt}. 
+Below are listed commands, which were inlcuded into the script:
 <<>>=
 cat(readLines("GWASQC_script.txt"), sep = "\n")
 @
@@ -756,10 +758,6 @@ When the input script was prepared, we load the \emph{GWAtoolbox} library and ca
 <<results=hide>>=
 library(GWAtoolbox)
 gwasqc("GWASQC_script.txt")
-@
-As a result, the following output files were generated:
-<<echo=FALSE>>=
-cat(list.files(pattern="^(res.*)|(.*(html|png))"), sep="\n")
 @
 
 \section{Between-study comparisons}
@@ -821,9 +819,8 @@ It can be seen that, currently, no automatic method to identify outlier studies 
 <<results=hide>>=
 library(GWAtoolbox)
 W <- kusk_check("GWASQC_script.txt", worst = c(50), plot = TRUE)
-points(W$sk50, W$ku50, pch = 22, bg = "orange", cex = 2)
-points(W$sk50[W$ku > 5],W$ku50[W$ku > 5], pch = 22, bg = 2, cex = 2)
-text(W$sk50[W$ku > 5],W$ku50[W$ku > 5] - 5, lab = W$study[W$ku > 5], cex = 1)
+points(W$sk50[W$ku50 > 5], W$ku50[W$ku50 > 5], pch = 22, bg = 2, cex = 2)
+text(W$sk50[W$ku50 > 5], W$ku50[W$ku50 > 5], labels = W$study[W$ku50 > 5], cex = 1, pos = 4)
 @
 \end{example} 
 
@@ -855,16 +852,16 @@ Z <- dispersion_check("GWASQC_script.txt", plot=TRUE)
 Z
 @
 <<results=hide>>=
-text(Z$median_n, Z$mean_se, Z$study) # Add study labels
+text(Z$median_n, Z$mean_se, labels=Z$study, pos=c(2,4,2,1,2))
 @
 <<results=hide>>=
-Z <- dispersion_check("GWASQC_script.txt", sample_sizes=c(3000, 2000), plot=TRUE)
+Z <- dispersion_check("GWASQC_script.txt", sample_sizes=c(1200, 200, 1000, 500, 700), plot=TRUE)
 @
 <<>>=
 Z
 @
 <<results=hide>>=
-text(Z$median_n, Z$mean_se, Z$study) # Add study labels
+text(Z$median_n, Z$mean_se, labels=Z$study, pos=c(2,4,2,1,2))
 @
 \end{example} 
 

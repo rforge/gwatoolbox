@@ -46,7 +46,7 @@
 	
 	# run dispersion_check() function
 	Z <- dispersion_check("GWASQC_script.txt", plot=TRUE)
-	text(Z$median_n, Z$mean_se, Z$study)
+	text(Z$median_n, Z$mean_se, labels=Z$study, pos=c(2,4,2,1,2))
 
 	\dontshow{
 	# restore previous workspace
