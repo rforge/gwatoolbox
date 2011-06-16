@@ -64,7 +64,7 @@ The following steps describe the installation procedure:
 	\begin{itemize}
 	\item[i.] Execute the command:
 		\begin{quotation}
-		\noindent \texttt{install.package("path/to/GWAtoolbox\_X.Y.Z.zip", repos=NULL)}
+		\noindent \texttt{install.packages("path/to/GWAtoolbox\_X.Y.Z.zip", repos=NULL)}
 		\end{quotation}
 		where \texttt{path/to} is the directory of the downloaded package.
 	\item[ii.] Now you can load the package in R with the command:
@@ -76,7 +76,7 @@ The following steps describe the installation procedure:
 	\begin{itemize}
 	\item[i.] Execute the command:
 		\begin{quotation}
-		\noindent \texttt{install.package("path/GWAtoolbox\_X.Y.Z.zip",\linebreak lib="path/to/install/directory",\linebreak repos=NULL)}
+		\noindent \texttt{install.packages("path/to/GWAtoolbox\_X.Y.Z.zip",\linebreak lib="path/to/install/directory",\linebreak repos=NULL)}
 		\end{quotation}
 		where \texttt{path/to/install/directory} is the path with your install directory.
 	\item[ii.] Now you can load the package in R with command:
@@ -120,6 +120,69 @@ When these requirements are fulfilled, the following steps will guide you throug
 		\begin{quotation}
 		\noindent \texttt{library(GWAtoolbox, lib.loc="path/to/install/directory")}
 		\end{quotation}
+	\end{itemize}
+\end{itemize}
+
+\subsection{Mac OS X}
+
+\emph{GWAtoolbox} for Mac OS X is distributed in compiled binary form.
+The following steps describe the installation procedure:
+\begin{itemize}
+\item[1. ] Download the latest package version \emph{GWAtoolbox\_X.Y.Z.tar.gz}.
+\item[2a.] To install from the Mac OS X shell (\emph{Terminal}):
+\begin{itemize}
+	\item[3a.] If you have administrator privileges (you can install packages to the main R library):
+		\begin{itemize}
+		\item[i.] In the Mac OS X shell execute the command:
+			\begin{quotation}
+			\noindent \texttt{R CMD INSTALL path/to/GWAtoolbox\_X.Y.Z.tar.gz}
+			\end{quotation}
+			where \texttt{path/to} is the directory of the downloaded package.
+		\item[ii.] Now you can start the R program and load the package with the command:
+			\begin{quotation}
+			\noindent \texttt{library(GWAtoolbox)}
+			\end{quotation}
+		\end{itemize}
+	\item[3b.] If you do NOT have sufficient privileges to install packages to the main R library directory:
+		\begin{itemize}
+		\item[i.] In the Mac OS X shell execute the single line command:
+			\begin{quotation}
+			\noindent \texttt{R CMD INSTALL path/to/GWAtoolbox\_X.Y.Z.tar.gz \linebreak -l path/to/install/directory}
+			\end{quotation}
+			where \texttt{path/to/install/directory} is the path with your install directory.
+		\item[ii.] Now you can start the R program and load the package with the command:
+			\begin{quotation}
+			\noindent \texttt{library(GWAtoolbox, lib.loc="path/to/install/directory")}
+			\end{quotation}
+		\end{itemize}
+\end{itemize}
+\item[2b.] To install from R:
+\begin{itemize}
+	\item[3. ] Start the R program.
+	\item[4a.] If you have administrator privileges (you can install packages to the main R library):
+		\begin{itemize}
+		\item[i.] Execute the command:
+			\begin{quotation}
+			\noindent \texttt{install.packages("path/to/GWAtoolbox\_X.Y.Z.tar.gz", repos=NULL)}
+			\end{quotation}
+			where \texttt{path/to} is the directory of the downloaded package.
+		\item[ii.] Now you can load the package in R with the command:
+			\begin{quotation}
+			\noindent \texttt{library(GWAtoolbox)}
+			\end{quotation}
+		\end{itemize}
+	\item[4b.] If you do NOT have sufficient privileges to install packages to the main R library directory:
+		\begin{itemize}
+		\item[i.] Execute the command:
+			\begin{quotation}
+			\noindent \texttt{install.packages("path/to/GWAtoolbox\_X.Y.Z.tar.gz",\linebreak lib="path/to/install/directory",\linebreak repos=NULL)}
+			\end{quotation}
+			where \texttt{path/to/install/directory} is the path with your install directory.
+		\item[ii.] Now you can load the package in R with command:
+			\begin{quotation}
+			\noindent \texttt{library(GWAtoolbox, lib.loc = "path/to/install/directory")}
+			\end{quotation}
+		\end{itemize}
 	\end{itemize}
 \end{itemize}
 
