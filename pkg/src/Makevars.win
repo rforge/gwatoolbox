@@ -20,6 +20,9 @@
 # The GSL_LIBS variable points to the directory with GSL libraries.
 # The GSL_INCL variable points to the directory with GSL headers.
 
+GSL_LIBS = $(LIB_GSL)/lib
+GSL_INCL = $(LIB_GSL)/include
+
 PKG_LIBS = $(GWALIBS) -L$(GSL_LIBS) -Wl,-Bstatic -lm -lgsl -lgslcblas -Wl,-Bdynamic
 PKG_CXXFLAGS = -I$(GSL_INCL)  
 

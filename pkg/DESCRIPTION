@@ -1,6 +1,6 @@
 Package: GWAtoolbox
-Version: 1.1.0
-Date: 2011-06-17
+Version: 1.1.1
+Date: 2011-07-07
 Title: GWAS Quality Control
 Author: Daniel Taliun <Daniel.Taliun@eurac.edu>, Christian Fuchsberger <cfuchsb@umich.edu>, Cristian Pattaro <Cristian.Pattaro@eurac.edu>
 Maintainer: Daniel Taliun <Daniel.Taliun@eurac.edu>, Christian Fuchsberger <cfuchsb@umich.edu> 
