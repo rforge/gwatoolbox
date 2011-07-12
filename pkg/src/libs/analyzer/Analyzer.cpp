@@ -3928,7 +3928,7 @@ void Analyzer::estimate_lines_count(File& file) throw (AnalyzerException) {
 		}
 	} catch (ifstream::failure &e) {
 		if (!ifile_stream.eof()) {
-			throw &e;
+			throw AnalyzerException(3, file.get_full_path());
 		} else {
 			ifile_stream.clear();
 			header_length = chars_count;
@@ -3966,7 +3966,7 @@ void Analyzer::estimate_lines_count(File& file) throw (AnalyzerException) {
 				}
 				catch (ifstream::failure &e) {
 					if (!ifile_stream.eof()) {
-						throw &e;
+						throw AnalyzerException(3, file.get_full_path());
 					} else {
 						ifile_stream.clear();
 
