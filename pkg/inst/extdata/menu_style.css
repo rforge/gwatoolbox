@@ -1,0 +1,68 @@
+body {
+	height: 100%;
+	background-color: #F1E5BF;
+	margin: 0px;
+	padding: 0px;
+}
+
+div.panel {
+	position: absolute;
+	width: 239px;
+	height: 100%;
+	border-top-width: 0px;
+	border-left-width: 0px;
+	border-right-width: 1px;
+	border-bottom-width: 0px;
+	border-style: solid;
+	border-color: #C4A375;
+	overflow: auto;
+}
+
+a:link {
+	font-family: Verdana, Geneva, Arial, Helvetica, sans-serif;
+	font-size: 11px;
+	text-decoration: none;
+	color: #000;
+}
+
+a:visited {
+	font-family: Verdana, Geneva, Arial, Helvetica, sans-serif;
+	font-size: 11px;
+	text-decoration: none;
+	color: #000;
+}
+
+a:hover {
+	font-family: Verdana, Geneva, Arial, Helvetica, sans-serif;
+	font-size: 11px;
+	text-decoration: none;
+	color: #6E281C;
+}
+
+a:active {
+	font-family: Verdana, Geneva, Arial, Helvetica, sans-serif;
+	font-size: 11px;
+	text-decoration: none;
+	color: #6E281C;
+}
+
+h1 {
+	font-family: Verdana, Geneva, Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	font-style: normal;
+	font-weight: 600;
+}
+
+div.menu {
+	padding-top: 25px;
+	padding-left: 5px;
+	padding-right: 5px;
+	padding-bottom: 0px;
+}
+
+hr {
+	color: #C4A375;
+	background-color: #C4A375;
+	height: 1px;
+	border: 0px;
+}
