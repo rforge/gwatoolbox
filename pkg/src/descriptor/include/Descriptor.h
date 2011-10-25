@@ -157,10 +157,12 @@ public:
 	vector<double>* get_threshold(const char* name) throw (DescriptorException);
 	vector<const char*>* get_thresholds();
 	const char* get_renamed_column(const char* name) throw (DescriptorException);
+	int get_column_order(const char* name, bool case_sensitive) throw (DescriptorException);
 	vector<const char*>* get_reordered_columns();
 	int get_columns_number();
 	int get_properties_number();
 	int get_thresholds_number();
+	int get_reordered_columns_number();
 
 	void set_full_path(const char* full_path, char path_separator = DEFAULT_PATH_SEPARATOR) throw (DescriptorException);
 

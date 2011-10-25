@@ -56,6 +56,7 @@ private:
 	int oevar_imp_column_pos;
 
 	static bool compare_columns(Column* first, Column* second);
+	static bool compare_columns_by_name(Column* first, Column* second);
 
 public:
 	static const unsigned int HEAP_SIZE;

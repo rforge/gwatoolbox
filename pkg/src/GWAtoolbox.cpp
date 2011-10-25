@@ -1222,30 +1222,65 @@ int main(int args, char** argv) {
 	char fileSep = '\\';
 	const char* resLocation = "inst\\extdata\\";
 
+	vector<Descriptor*>* ds = NULL;
+	vector<Descriptor*>::iterator ds_it;
+	vector<const char*>* columns = NULL;
+	vector<const char*>::iterator columns_it;
+	GwaFile* gwa_file = NULL;
+
+	void (GwaFile::*check_functions[8])(Descriptor*) = {
+			&GwaFile::check_filters,
+			&GwaFile::check_thresholds,
+			&GwaFile::check_prefix,
+			&GwaFile::check_casesensitivity,
+			&GwaFile::check_missing_value,
+			&GwaFile::check_separators,
+			&GwaFile::check_order,
+			&GwaFile::check_genomiccontrol
+	};
+
+	double inflation_factor = numeric_limits<double>::quiet_NaN();
+	int n_total = 0;
+	int n_filtered = 0;
+
 	try {
-		vector<Descriptor*>* ds = NULL;
-		vector<Descriptor*>::iterator ds_it;
-		vector<const char*>* columns = NULL;
-		vector<const char*>::iterator columns_it;
-		vector<Plot*> plots;
-		vector<Plot*> combined_boxplots;
+		Formatter formatter;
 
-		char* html_path = NULL;
-
-		ds = Descriptor::process_instructions("qc_script.txt", fileSep);
+		ds = Descriptor::process_instructions("QC_script_format.txt", fileSep);
 
 		for (ds_it = ds->begin(); ds_it != ds->end(); ds_it++) {
-			columns = (*ds_it)->get_reordered_columns();
-
 			cout << "File: " << (*ds_it)->get_name() << endl;
+
 			cout << "Ordered columns:";
+			columns = (*ds_it)->get_reordered_columns();
 			for (columns_it = columns->begin(); columns_it != columns->end(); columns_it++) {
 				cout << " " << *columns_it;
 			}
 			cout << endl;
+
+			gwa_file = new GwaFile(*ds_it, check_functions, 8);
+
+			formatter.open_gwafile(gwa_file);
+			formatter.process_header();
+
+			if (gwa_file->is_gc_on()) {
+				inflation_factor = gwa_file->get_inflation_factor();
+				if (isnan(inflation_factor)) {
+					inflation_factor = formatter.calculate_lambda(n_total, n_filtered);
+				}
+			}
+
+			cout << "Inflation factor: " << inflation_factor << endl;
+
+			formatter.format(inflation_factor, '\t', n_total, n_filtered);
+
+			formatter.close_gwafile();
+
+			delete gwa_file;
+			delete *ds_it;
 		}
 
-		GwaFile gwaf(ds->at(0));
+	/*	GwaFile gwaf(ds->at(0));
 
 		cout << gwaf.get_descriptor()->get_full_path() << endl;
 
@@ -1282,7 +1317,7 @@ int main(int args, char** argv) {
 
 		cout << html_path << endl;
 
-		analyzer.close_gwafile();
+		analyzer.close_gwafile();*/
 	} catch (Exception &e) {
 		cout << endl;
 		cout << e.what() << endl;

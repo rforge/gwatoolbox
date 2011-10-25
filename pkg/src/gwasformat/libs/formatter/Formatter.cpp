@@ -56,6 +56,10 @@ bool Formatter::compare_columns(Column* first, Column* second) {
 	return (first->get_order() < second->get_order());
 }
 
+bool Formatter::compare_columns_by_name(Column* first, Column* second) {
+	return (strcmp(first->get_header(), second->get_header()) < 0);
+}
+
 void Formatter::open_gwafile(GwaFile* gwafile) throw (FormatterException) {
 	if (gwafile == NULL) {
 		throw FormatterException("Formatter", "open_gwafile( GwaFile* )", __LINE__, 0, "gwafile");
@@ -141,51 +145,35 @@ void Formatter::process_header() throw (FormatterException) {
 			column_name = descriptor->get_default_column(new_column_name, gwafile->is_case_sensitive());
 			if (column_name != NULL) {
 				if (strcmp(column_name, Descriptor::MARKER) == 0) {
-					column->set_order(0);
 				} else if (strcmp(column_name, Descriptor::CHR) == 0) {
-					column->set_order(1);
 				} else if (strcmp(column_name, Descriptor::POSITION) == 0) {
-					column->set_order(2);
 				} else if (strcmp(column_name, Descriptor::ALLELE1) == 0) {
-					column->set_order(3);
 				} else if (strcmp(column_name, Descriptor::ALLELE2) == 0) {
-					column->set_order(4);
 				} else if (strcmp(column_name, Descriptor::STRAND) == 0) {
-					column->set_order(5);
 				} else if (strcmp(column_name, Descriptor::EFFECT) == 0) {
-					column->set_order(6);
 				} else if (strcmp(column_name, Descriptor::STDERR) == 0) {
 					stderr_column = column;
-					column->set_order(7);
 				} else if (strcmp(column_name, Descriptor::PVALUE) == 0) {
 					pvalue_column = column;
 					pvalue_column_pos = column_position;
-					column->set_order(8);
 				} else if (strcmp(column_name, Descriptor::FREQLABEL) == 0) {
 					maf_column = column;
 					maf_column_pos = column_position;
-					column->set_order(9);
 				} else if (strcmp(column_name, Descriptor::HWE_PVAL) == 0) {
-					column->set_order(10);
 				} else if (strcmp(column_name, Descriptor::CALLRATE) == 0) {
-					column->set_order(11);
 				} else if (strcmp(column_name, Descriptor::N_TOTAL) == 0) {
 					n_total_column = column;
-					column->set_order(12);
 				} else if (strcmp(column_name, Descriptor::IMPUTED) == 0) {
-					column->set_order(13);
 				} else if (strcmp(column_name, Descriptor::USED_FOR_IMP) == 0) {
-					column->set_order(14);
 				} else if (strcmp(column_name, Descriptor::OEVAR_IMP) == 0) {
 					oevar_imp_column = column;
 					oevar_imp_column_pos = column_position;
-					column->set_order(15);
 				} else if (strcmp(column_name, Descriptor::AVPOSTPROB) == 0) {
-					column->set_order(16);
 				}
 			}
 
 			column->set_header(new_column_name);
+			column->set_order(descriptor->get_column_order(new_column_name, gwafile->is_case_sensitive()));
 
 			input_columns.push_back(column);
 
@@ -610,14 +598,14 @@ void Formatter::format(double lambda, char new_separator, int& n_total, int& n_f
 			if (stderr_column != NULL) {
 				column = new CorrectedStandardErrorColumn(stderr_column, lambda);
 				column->set_header("%s_gc", stderr_column->get_header());
-				column->set_order(17);
+				column->set_order(descriptor->get_column_order(column->get_header(), gwafile->is_case_sensitive()));
 				output_columns.push_back(column);
 			}
 
 			if (pvalue_column != NULL) {
 				column = new CorrectedPvalueColumn(pvalue_column, lambda);
 				column->set_header("%s_gc", pvalue_column->get_header());
-				column->set_order(18);
+				column->set_order(descriptor->get_column_order(column->get_header(), gwafile->is_case_sensitive()));
 				output_columns.push_back(column);
 			}
 		}
@@ -625,12 +613,16 @@ void Formatter::format(double lambda, char new_separator, int& n_total, int& n_f
 		if ((oevar_imp_column != NULL) && (n_total_column != NULL)) {
 			column = new EffectiveSampleSizeColumn(n_total_column, oevar_imp_column);
 			column->set_header("%s_effective", n_total_column->get_header());
-			column->set_order(19);
+			column->set_order(descriptor->get_column_order(column->get_header(), gwafile->is_case_sensitive()));
 			output_columns.push_back(column);
 		}
 
 		if (gwafile->is_order_on()) {
-			stable_sort(output_columns.begin(), output_columns.end(), compare_columns);
+			if (descriptor->get_reordered_columns_number() > 0) {
+				stable_sort(output_columns.begin(), output_columns.end(), compare_columns);
+			} else {
+				stable_sort(output_columns.begin(), output_columns.end(), compare_columns_by_name);
+			}
 		}
 
 		ofile_stream.exceptions(ios_base::failbit | ios_base::badbit);

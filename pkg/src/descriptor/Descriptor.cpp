@@ -459,7 +459,7 @@ void Descriptor::copy(vector<const char*>& vector_to, vector<const char*> vector
 	char* value_copy = NULL;
 
 	for (vector_char_it = vector_from.begin(); vector_char_it != vector_from.end(); vector_char_it++) {
-		value_copy = (char*)malloc(strlen((*vector_char_it) + 1) * sizeof(char));
+		value_copy = (char*)malloc((strlen(*vector_char_it) + 1) * sizeof(char));
 		if (value_copy == NULL) {
 			throw DescriptorException("Descriptor", "copy( vector<const char*>& , vector<const char*>& )", __LINE__, 2, (strlen(*vector_char_it) + 1) * sizeof(char));
 		}
@@ -513,8 +513,7 @@ const char* Descriptor::get_default_column(const char* actual_name, bool case_se
 					return map_char_it->first;
 				}
 			}
-		}
-		else {
+		} else {
 			for (map_char_it = columns.begin(); map_char_it != columns.end(); map_char_it++) {
 				if (strcmp_ignore_case(map_char_it->second, actual_name) == 0) {
 					return map_char_it->first;
@@ -601,6 +600,33 @@ const char* Descriptor::get_renamed_column(const char* name) throw (DescriptorEx
 	}
 }
 
+int Descriptor::get_column_order(const char* name, bool case_sensitive) throw (DescriptorException) {
+	if ((name != NULL) && (strlen(name) > 0)) {
+		int position = 0;
+		if (case_sensitive) {
+			vector_char_it = reordered_columns.begin();
+			while (vector_char_it != reordered_columns.end()) {
+				if (strcmp(*vector_char_it, name) == 0) {
+					return position;
+				}
+				position += 1;
+				vector_char_it++;
+			}
+		} else {
+			vector_char_it = reordered_columns.begin();
+			while (vector_char_it != reordered_columns.end()) {
+				if (strcmp_ignore_case(*vector_char_it, name) == 0) {
+					return position;
+				}
+				position += 1;
+				vector_char_it++;
+			}
+		}
+	}
+
+	return numeric_limits<int>::max();
+}
+
 vector<const char*>* Descriptor::get_reordered_columns() {
 	vector<const char*>* reordered_columns = new vector<const char*>();
 
@@ -611,6 +637,10 @@ vector<const char*>* Descriptor::get_reordered_columns() {
 	}
 
 	return reordered_columns;
+}
+
+int Descriptor::get_reordered_columns_number() {
+	return reordered_columns.size();
 }
 
 void Descriptor::set_abbreviation(const char* abbreviation) throw (DescriptorException) {
@@ -1024,11 +1054,10 @@ vector<Descriptor*>* Descriptor::process_instructions(const char* script_name, c
 						if ((strcmp_ignore_case(tokens.front(), ON_MODES[0]) == 0) ||
 								(strcmp_ignore_case(tokens.front(), ON_MODES[1]) == 0)) {
 							default_descriptor.add_property(ORDER, ON_MODES[0]);
+							default_descriptor.remove_reordered_columns();
+
 							tokens.pop_front();
-
 							if ((!tokens.empty()) && (tokens.front()[0] != SCRIPT_COMMENT_SYMBOL)) {
-								default_descriptor.remove_reordered_columns();
-
 								do {
 									default_descriptor.add_reordered_column(tokens.front());
 									tokens.pop_front();
