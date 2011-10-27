@@ -23,5 +23,41 @@
 \keyword{utilities}
 \keyword{package}
 \examples{
+	\dontshow{
+	# change the workspace
+	currentWd <- getwd()
+	newWd <- paste(system.file(package="GWAtoolbox"), "doc", sep="/")
+	setwd(newWd)
+	}
 
+	# name of an input script
+	script <- "GWASQC_script.txt"
+
+	# load GWAtoolbox library
+	library(GWAtoolbox)
+
+	# show contents of the input script
+	file.show(script, title=script)
+
+	\dontshow{options(device.ask.default = FALSE)}
+
+	# run gwasqc() function
+	gwasqc(script)
+	
+	# run dispersion_check() function
+	Z <- dispersion_check("GWASQC_script.txt", plot=TRUE)
+	text(Z$median_n, Z$mean_se, labels=Z$study, pos=c(2,4,2,1,2))
+
+	\dontshow{
+	# restore previous workspace
+	setwd(currentWd)
+	}
+	
+    \dontshow{
+	# all input and output files are located in the subdirectory "doc" of the installed GWAtoolbox package
+	message <- c("\n", rep("#", 40), "\n")
+	message <- c(message, "\nAll input and output files of this example are located in directory:\n", newWd, "\n")
+	message <- c(message, "\n", rep("#", 40),"\n")
+	cat(message, sep="")
+	}
 }

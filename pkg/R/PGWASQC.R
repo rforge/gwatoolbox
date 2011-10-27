@@ -17,13 +17,13 @@
 # along with GWAtoolbox.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-pgwasqc <- function(script, cpu) {
+pgwasqc <- function(script, processes) {
 	if (missing(script)) {
 		stop("The input script argument is missing.")
 	}
 	
-	if (missing(cpu)) {
-		stop("The number of CPUs argument is missing.")
+	if (missing(processes)) {
+		stop("The number of processes argument is missing.")
 	}
 	
 	if (is.character(script)) {
@@ -35,19 +35,19 @@ pgwasqc <- function(script, cpu) {
 		stop("The input script argument must be a character string.")
 	}
 	
-	if (is.numeric(cpu)) {
-		if (abs(cpu - round(cpu)) < .Machine$double.eps ^ 0.5) {
-			cpu <- as.integer(cpu)
-			if (is.na(cpu)) {
-				stop("Error while casting number of CPUs argument to integer.")
-			} else if (cpu <= 1) {
-				stop("The number of CPUs must be greater than 1.")	
+	if (is.numeric(processes)) {
+		if (abs(processes - round(processes)) < .Machine$double.eps ^ 0.5) {
+			processes <- as.integer(processes)
+			if (is.na(processes)) {
+				stop("Error while casting number of processes argument to integer.")
+			} else if (processes <= 1) {
+				stop("The number of processes must be greater than 1.")	
 			}
 		} else {
-			stop("The number of CPUs argument must be integer.")
+			stop("The number of processes argument must be integer.")
 		}
 	} else {
-		stop("The number of CPUs argument must be numeric.")
+		stop("The number of processes argument must be numeric.")
 	}
 	
 	snow_library <- suppressWarnings(require(snow, quietly = TRUE));
@@ -84,10 +84,10 @@ pgwasqc <- function(script, cpu) {
 	cat("Initializing cluster... ")
 	start_time <- proc.time()
 	
-	clusters <- makeCluster(rep("localhost", cpu), type="SOCK")
-	package_path <<- dirname(.path.package("GWAtoolbox"))
-	clusterExport(clusters, "package_path")
-	clusterEvalQ(clusters, .libPaths(union(package_path, .libPaths())))
+	clusters <- makeCluster(rep("localhost", processes), type="SOCK")
+	assign("gwatoolbox_package_path", dirname(.path.package("GWAtoolbox")), envir = .GlobalEnv)
+	clusterExport(clusters, "gwatoolbox_package_path")
+	clusterEvalQ(clusters, .libPaths(union(gwatoolbox_package_path, .libPaths())))
 	clusterEvalQ(clusters, library(GWAtoolbox))
 	
 	elapsed_time <- proc.time() - start_time

@@ -26,5 +26,42 @@
 \keyword{utilities}
 \keyword{package}
 \examples{
+	\dontshow{
+	# change the workspace
+	currentWd <- getwd()
+	newWd <- paste(system.file(package="GWAtoolbox"), "doc", sep="/")
+	setwd(newWd)
+	}
 
+	# name of an input script
+	script <- "GWASQC_script.txt"
+
+	# load GWAtoolbox library
+	library(GWAtoolbox)
+
+	# show contents of the input script
+	file.show(script, title=script)
+
+	\dontshow{options(device.ask.default = FALSE)}
+
+	# run gwasqc() function
+	gwasqc(script)
+	
+	# run kusk_check() function
+	W <- kusk_check("GWASQC_script.txt", worst = c(50), plot = TRUE)
+	points(W$sk50[W$ku50 > 5], W$ku50[W$ku50 > 5], pch = 22, bg = 2, cex = 2)
+	text(W$sk50[W$ku50 > 5], W$ku50[W$ku50 > 5], lab = W$study[W$ku50 > 5], cex = 1, pos = 4)
+
+	\dontshow{
+	# restore previous workspace
+	setwd(currentWd)
+	}
+	
+    \dontshow{
+	# all input and output files are located in the subdirectory "doc" of the installed GWAtoolbox package
+	message <- c("\n", rep("#", 40), "\n")
+	message <- c(message, "\nAll input and output files of this example are located in directory:\n", newWd, "\n")
+	message <- c(message, "\n", rep("#", 40),"\n")
+	cat(message, sep="")
+	}
 }
