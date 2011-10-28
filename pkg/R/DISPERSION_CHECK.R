@@ -37,10 +37,7 @@ dispersion_check <- function(script, sample_sizes = NULL, plot = TRUE) {
 		if (!is.vector(sample_sizes, mode="numeric")) {
 			stop("Argument 'sample_sizes' must be a numeric vector of positive values.")
 		}
-		sample_sizes<-sample_sizes[!is.na(sample_sizes) & sample_sizes > 0]
-		if (length(sample_sizes) != nrow(files)) {
-			stop("The length of vector 'sample_sizes' must be equal to the number of studies in 'summary_file'.")
-		}
+		sample_sizes <- sample_sizes[!is.na(sample_sizes) & sample_sizes > 0]
 	}
 	
 	if (!is.logical(plot)) {
@@ -90,6 +87,12 @@ dispersion_check <- function(script, sample_sizes = NULL, plot = TRUE) {
 				files$output_name[i] <- sub("(\\.csv|\\.txt|\\.html|\\.htm)$", "", files$output_name[i], ignore.case=T)
 			}
 			files$output_name[i] <- paste(prefix, files$output_name[i], ".csv", sep="")	
+		}
+	}
+	
+	if (!is.null(sample_sizes)) {
+		if (length(sample_sizes) != nrow(files)) {
+			stop("The length (without NA and <= 0 values) of vector 'sample_sizes' must be equal to the number of studies in 'summary_file'.")
 		}
 	}
 

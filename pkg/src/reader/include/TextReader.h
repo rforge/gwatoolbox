@@ -25,6 +25,7 @@
 #include <set>
 #include <math.h>
 #include <limits>
+#include <time.h>
 
 #include "Reader.h"
 

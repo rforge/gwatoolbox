@@ -304,12 +304,12 @@
 \keyword{plot}
 \keyword{package}
 \examples{
-	\dontshow{
+	\dontrun{
+	# all input and output files are located in the subdirectory "doc" of the installed GWAtoolbox package
 	# change the workspace
 	currentWd <- getwd()
 	newWd <- paste(system.file(package="GWAtoolbox"), "doc", sep="/")
 	setwd(newWd)
-	}
 
 	# name of an input script
 	script <- "PGWASQC_script.txt"
@@ -320,21 +320,10 @@
 	# show contents of the input script
 	file.show(script, title=script)
 
-	\dontshow{options(device.ask.default = FALSE)}
-
 	# run pgwasqc() function with 2 parallel processes
 	pgwasqc(script, 2)
-
-	\dontshow{
+	
 	# restore previous workspace
 	setwd(currentWd)
-	}
-	
-    \dontshow{
-	# all input and output files are located in the subdirectory "doc" of the installed GWAtoolbox package
-	message <- c("\n", rep("#", 40), "\n")
-	message <- c(message, "\nAll input and output files of this example are located in directory:\n", newWd, "\n")
-	message <- c(message, "\n", rep("#", 40),"\n")
-	cat(message, sep="")
 	}
 }

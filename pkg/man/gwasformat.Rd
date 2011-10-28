@@ -264,10 +264,50 @@
 	All the output files corresponding to the input files \file{input_file_1.txt} and \file{input_file_2.csv} will be prefixed with \emph{res_}; 
 	the output files corresponding to the input file \file{input_file_3.tab} will be prefixed with \emph{result_}.
 }
+\section{The Output Files}{
+	\code{gwasformat} produces one formatted (renamed/re-ordered columns, genomic control correction and etc.) copy of every original GWA data file.
+	The formatting history information, containing calculated inflation factors and number of filtered markers, is saved to the log file under the provided \emph{logfile} name.  
+}
 \author{Daniel Taliun, Christian Fuchsberger, Cristian Pattaro}
 \keyword{misc}
 \keyword{utilities}
 \keyword{plot}
 \keyword{package}
 \examples{
+	\dontshow{
+	# change the workspace
+	currentWd <- getwd()
+	newWd <- paste(system.file(package="GWAtoolbox"), "doc", sep="/")
+	setwd(newWd)
+	}
+	
+	# name of an input script
+	script <- "GWASFORMAT_script.txt"
+	
+	# name of a logfile
+	logfile <- "gwasformat_log.txt"
+	
+	# load GWAtoolbox library
+	library(GWAtoolbox)
+	
+	# show contents of the input script
+	file.show(script, title=script)
+	
+	\dontshow{options(device.ask.default = FALSE)}
+	
+	# run gwasformat() function
+	gwasformat(script, logfile)
+	
+	\dontshow{
+	# restore previous workspace
+	setwd(currentWd)
+	}
+	
+	\dontshow{
+	# all input and output files are located in the subdirectory "doc" of the installed GWAtoolbox package
+	message <- c("\n", rep("#", 40), "\n")
+	message <- c(message, "\nAll input and output files of this example are located in directory:\n", newWd, "\n")
+	message <- c(message, "\n", rep("#", 40),"\n")
+	cat(message, sep="")
+	}
 }
