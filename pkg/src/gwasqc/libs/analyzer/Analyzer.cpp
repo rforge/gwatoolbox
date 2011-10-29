@@ -1743,7 +1743,7 @@ void Analyzer::create_plots(vector<Plot*>& plots) throw (AnalyzerException) {
 										(auxiliary::strcmp_ignore_case(file_extension, HTM_EXTENSION) == 0))) {
 						plot->set_formatted_name("%s%.*s_%s", output_prefix, file_extension - file_name, file_name, descriptor->get_column(column_name));
 					} else {
-						plot->set_formatted_name("%s%.%s_%s", output_prefix, file_name, descriptor->get_column(column_name));
+						plot->set_formatted_name("%s%s_%s", output_prefix, file_name, descriptor->get_column(column_name));
 					}
 					plot->set_formatted_title("Distribution of %s", gwafile->get_descriptor()->get_column(column_name));
 
