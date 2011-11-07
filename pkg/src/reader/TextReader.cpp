@@ -123,24 +123,24 @@ bool TextReader::is_compressed() {
 	return false;
 }
 
-unsigned int TextReader::estimate_lines_count() throw (ReaderException) {
-	int file_length = 0;
+unsigned long int TextReader::estimate_lines_count() throw (ReaderException) {
+	long int file_length = 0;
 	int header_length = 0;
 	int c = 0;
 
 	int denominator = ROWS_SAMPLE_SIZE * 100;
 	double estimated_location = 0.0;
-	int file_position = 0;
+	long int file_position = 0;
 	int chars_count = 0;
 	int lines_count = 0;
 
 	multiset<int> line_lengths;
 	multiset<int>::iterator line_lengths_it;
-	vector<double> medians;
-	double median = 0.0;
+	vector<double> sample_means;
+	double sample_mean = 0.0;
 	double mean = 0.0;
 
-	unsigned int estimated_lines_count = 1;
+	unsigned int estimated_lines_count = 0;
 
 	if (ifile_stream.is_open()) {
 		ifile_stream.close();
@@ -159,7 +159,13 @@ unsigned int TextReader::estimate_lines_count() throw (ReaderException) {
 
 	file_length = ifile_stream.tellg();
 	if (file_length < 0) {
-		throw ReaderException("TextReader", "unsigned int estimate_lines_count()", __LINE__, 9, file_name);
+		ifile_stream.clear();
+		ifile_stream.close();
+		if (ifile_stream.fail()) {
+			throw ReaderException("TextReader", "unsigned int estimate_lines_count()", __LINE__, 5, file_name);
+		}
+
+		return 0;
 	}
 
 	ifile_stream.seekg((streampos)0, ifstream::beg);
@@ -191,7 +197,7 @@ unsigned int TextReader::estimate_lines_count() throw (ReaderException) {
 		for (unsigned int i = 0; i < ROWS_SAMPLE_COUNT; i++) {
 			for (unsigned int j = 0; j < ROWS_SAMPLE_SIZE; j++) {
 				estimated_location = (rand() % denominator) / (double)denominator;
-				file_position = (int)(file_length * estimated_location);
+				file_position = (long int)(file_length * estimated_location);
 
 				ifile_stream.seekg((streampos)file_position, ifstream::beg);
 				if (ifile_stream.fail()) {
@@ -245,30 +251,23 @@ unsigned int TextReader::estimate_lines_count() throw (ReaderException) {
 
 			if (lines_count > 0) {
 				line_lengths_it = line_lengths.begin();
-
-				for (int i = 0; i < (lines_count / 2 - 1); i++) {
+				while (line_lengths_it != line_lengths.end()) {
+					sample_mean += (*line_lengths_it);
 					line_lengths_it++;
 				}
-
-				if (lines_count % 2 == 0) {
-					median = (*line_lengths_it + *(++line_lengths_it)) / 2.0;
-				} else {
-					median = *(++line_lengths_it);
-				}
-
-				medians.push_back(median);
-
-				median = 0.0;
+				sample_mean = sample_mean / lines_count;
+				sample_means.push_back(sample_mean);
+				sample_mean = 0.0;
 				line_lengths.clear();
 			}
 		}
 
-		for (unsigned int i = 0; i < medians.size(); i++) {
-			mean += medians.at(i);
+		for (unsigned int i = 0; i < sample_means.size(); i++) {
+			mean += sample_means.at(i);
 		}
-		mean = mean / medians.size();
+		mean = mean / sample_means.size();
 
-		estimated_lines_count =  (int)ceil((file_length - header_length) / mean);
+		estimated_lines_count =  (long int)ceil((file_length - header_length) / mean);
 	}
 
 	ifile_stream.clear();

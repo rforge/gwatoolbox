@@ -132,6 +132,7 @@ Analyzer::~Analyzer() {
 	filtered_metas.clear();
 	ratio_metas.clear();
 	cross_table_metas.clear();
+	numeric_metas.clear();
 
 	gwafile = NULL;
 }
@@ -205,6 +206,7 @@ void Analyzer::close_gwafile() throw (AnalyzerException) {
 	filtered_metas.clear();
 	ratio_metas.clear();
 	cross_table_metas.clear();
+	numeric_metas.clear();
 
 	gwafile = NULL;
 }
@@ -220,6 +222,7 @@ void Analyzer::process_header() throw (AnalyzerException) {
 	Meta* meta = NULL;
 	vector<char*>::iterator vector_char_it;
 	vector<double>* thresholds;
+	unsigned int heap_size = 0;
 
 	if (gwafile == NULL) {
 		return;
@@ -233,6 +236,11 @@ void Analyzer::process_header() throw (AnalyzerException) {
 		descriptor = gwafile->get_descriptor();
 		header_separator = gwafile->get_header_separator();
 		header = *reader.line;
+
+		if ((gwafile->get_estimated_size() > numeric_limits<unsigned int>::max()) ||
+				((heap_size = (unsigned int)gwafile->get_estimated_size()) == 0)) {
+			heap_size = Meta::HEAP_SIZE;
+		}
 
 		for (int i = 0; i < MANDATORY_COLUMNS_SIZE; i++) {
 			column_name = descriptor->get_column(mandatory_columns[i]);
@@ -251,7 +259,7 @@ void Analyzer::process_header() throw (AnalyzerException) {
 			column_name = descriptor->get_default_column(token, gwafile->is_case_sensitive());
 			if (column_name != NULL) {
 				if (strcmp(column_name, Descriptor::MARKER) == 0) {
-					meta = new MetaUniqueness(gwafile->get_estimated_size());
+					meta = new MetaUniqueness(heap_size);
 				} else if (strcmp(column_name, Descriptor::ALLELE1) == 0) {
 					meta = new MetaGroup();
 				} else if (strcmp(column_name, Descriptor::ALLELE2) == 0) {
@@ -265,7 +273,7 @@ void Analyzer::process_header() throw (AnalyzerException) {
 					meta = new MetaGroup();
 				} else if (strcmp(column_name, Descriptor::PVALUE) == 0) {
 					thresholds = descriptor->get_threshold(Descriptor::PVALUE);
-					meta = new MetaImplausibleStrict(thresholds->at(0), thresholds->at(1), gwafile->get_estimated_size());
+					meta = new MetaImplausibleStrict(thresholds->at(0), thresholds->at(1), heap_size);
 					numeric_metas.push_back((MetaNumeric*)meta);
 					((MetaImplausibleStrict*)meta)->set_plots(true, false, false);
 					((MetaImplausibleStrict*)meta)->set_description("All data");
@@ -273,7 +281,7 @@ void Analyzer::process_header() throw (AnalyzerException) {
 					meta->set_full_name("P-value");
 					plots.push_back((MetaImplausibleStrict*)meta);
 				} else if (strcmp(column_name, Descriptor::EFFECT) == 0) {
-					meta = new MetaNumeric(gwafile->get_estimated_size());
+					meta = new MetaNumeric(heap_size);
 					numeric_metas.push_back((MetaNumeric*)meta);
 					((MetaNumeric*)meta)->set_description("All data");
 					((MetaNumeric*)meta)->set_ouptut(false, false, false, true, true, true);
@@ -281,7 +289,7 @@ void Analyzer::process_header() throw (AnalyzerException) {
 					plots.push_back((MetaNumeric*)meta);
 				} else if (strcmp(column_name, Descriptor::STDERR) == 0) {
 					thresholds = descriptor->get_threshold(Descriptor::STDERR);
-					meta = new MetaImplausible(thresholds->at(0), thresholds->at(1), gwafile->get_estimated_size());
+					meta = new MetaImplausible(thresholds->at(0), thresholds->at(1), heap_size);
 					numeric_metas.push_back((MetaNumeric*)meta);
 					((MetaImplausible*)meta)->set_description("All data");
 					((MetaImplausible*)meta)->set_ouptut(false, false, false, true, true, true);
@@ -289,7 +297,7 @@ void Analyzer::process_header() throw (AnalyzerException) {
 					plots.push_back((MetaImplausible*)meta);
 				} else if (strcmp(column_name, Descriptor::FREQLABEL) == 0) {
 					thresholds = descriptor->get_threshold(Descriptor::FREQLABEL);
-					meta = new MetaImplausibleStrictAdjusted(thresholds->at(0), thresholds->at(1), 0.5, gwafile->get_estimated_size());
+					meta = new MetaImplausibleStrictAdjusted(thresholds->at(0), thresholds->at(1), 0.5, heap_size);
 					numeric_metas.push_back((MetaNumeric*)meta);
 					((MetaImplausibleStrictAdjusted*)meta)->set_description(token);
 					((MetaImplausibleStrictAdjusted*)meta)->set_ouptut(false, false, false, true, true, true);
@@ -297,7 +305,7 @@ void Analyzer::process_header() throw (AnalyzerException) {
 					plots.push_back((MetaImplausibleStrictAdjusted*)meta);
 				} else if (strcmp(column_name, Descriptor::HWE_PVAL) == 0) {
 					thresholds = descriptor->get_threshold(Descriptor::HWE_PVAL);
-					meta = new MetaImplausibleStrict(thresholds->at(0), thresholds->at(1), gwafile->get_estimated_size());
+					meta = new MetaImplausibleStrict(thresholds->at(0), thresholds->at(1), heap_size);
 					if (!gwafile->is_high_verbosity()) {
 						((MetaImplausibleStrict*)meta)->set_plots(false, false, false);
 					}
@@ -308,7 +316,7 @@ void Analyzer::process_header() throw (AnalyzerException) {
 					plots.push_back((MetaImplausibleStrict*)meta);
 				} else if (strcmp(column_name, Descriptor::CALLRATE) == 0) {
 					thresholds = descriptor->get_threshold(Descriptor::CALLRATE);
-					meta = new MetaImplausibleStrict(thresholds->at(0), thresholds->at(1), gwafile->get_estimated_size());
+					meta = new MetaImplausibleStrict(thresholds->at(0), thresholds->at(1), heap_size);
 					if (!gwafile->is_high_verbosity()) {
 						((MetaImplausibleStrict*)meta)->set_plots(false, false, false);
 					}
@@ -318,7 +326,7 @@ void Analyzer::process_header() throw (AnalyzerException) {
 					numeric_metas.push_back((MetaNumeric*)meta);
 					plots.push_back((MetaImplausibleStrict*)meta);
 				} else if (strcmp(column_name, Descriptor::N_TOTAL) == 0) {
-					meta = new MetaNumeric(gwafile->get_estimated_size());
+					meta = new MetaNumeric(heap_size);
 					if (!gwafile->is_high_verbosity()) {
 						((MetaNumeric*)meta)->set_plots(true, false, false);
 					}
@@ -328,7 +336,7 @@ void Analyzer::process_header() throw (AnalyzerException) {
 					numeric_metas.push_back((MetaNumeric*)meta);
 					plots.push_back((MetaNumeric*)meta);
 				} else if (strcmp(column_name, Descriptor::IMPUTED) == 0) {
-					meta = new MetaNumeric(gwafile->get_estimated_size());
+					meta = new MetaNumeric(heap_size);
 					if (!gwafile->is_high_verbosity()) {
 						((MetaNumeric*)meta)->set_plots(false, false, false);
 					}
@@ -336,7 +344,7 @@ void Analyzer::process_header() throw (AnalyzerException) {
 					numeric_metas.push_back((MetaNumeric*)meta);
 					plots.push_back((MetaNumeric*)meta);
 				} else if (strcmp(column_name, Descriptor::USED_FOR_IMP) == 0) {
-					meta = new MetaNumeric(gwafile->get_estimated_size());
+					meta = new MetaNumeric(heap_size);
 					if (!gwafile->is_high_verbosity()) {
 						((MetaNumeric*)meta)->set_plots(false, false, false);
 					}
@@ -345,7 +353,7 @@ void Analyzer::process_header() throw (AnalyzerException) {
 					plots.push_back((MetaNumeric*)meta);
 				} else if (strcmp(column_name, Descriptor::OEVAR_IMP) == 0) {
 					thresholds = descriptor->get_threshold(Descriptor::OEVAR_IMP);
-					meta = new MetaImplausibleStrict(thresholds->at(0), thresholds->at(1), gwafile->get_estimated_size());
+					meta = new MetaImplausibleStrict(thresholds->at(0), thresholds->at(1), heap_size);
 					numeric_metas.push_back((MetaNumeric*)meta);
 					((MetaImplausibleStrict*)meta)->set_description("All data");
 					((MetaImplausibleStrict*)meta)->set_ouptut(false, false, false, true, true, true);
@@ -533,33 +541,33 @@ void Analyzer::finalize_processing() throw (AnalyzerException) {
 	}
 }
 
-unsigned int Analyzer::get_memory_usage() {
+double Analyzer::get_memory_usage() {
 	vector<Meta*>::iterator metas_it;
 	vector<MetaFiltered*>::iterator filtered_metas_it;
 	vector<MetaRatio*>::iterator ratio_metas_it;
 	vector<MetaCrossTable*>::iterator cross_table_meta_it;
 
-	unsigned int memory = 0;
+	double memory_usage = 0.0;
 
 	for (metas_it = metas.begin(); metas_it != metas.end(); metas_it++) {
 		if ((*metas_it) != NULL) {
-			memory += (*metas_it)->get_memory_usage();
+			memory_usage += (*metas_it)->get_memory_usage();
 		}
 	}
 
 	for (filtered_metas_it = filtered_metas.begin(); filtered_metas_it != filtered_metas.end(); filtered_metas_it++) {
-		memory += (*filtered_metas_it)->get_memory_usage();
+		memory_usage += (*filtered_metas_it)->get_memory_usage();
 	}
 
 	for (ratio_metas_it = ratio_metas.begin(); ratio_metas_it != ratio_metas.end(); ratio_metas_it++) {
-		memory += (*ratio_metas_it)->get_memory_usage();
+		memory_usage += (*ratio_metas_it)->get_memory_usage();
 	}
 
 	for (cross_table_meta_it = cross_table_metas.begin(); cross_table_meta_it != cross_table_metas.end(); cross_table_meta_it++) {
-		memory += (*cross_table_meta_it)->get_memory_usage();
+		memory_usage += (*cross_table_meta_it)->get_memory_usage();
 	}
 
-	return memory;
+	return memory_usage;
 }
 
 void Analyzer::initialize_column_dependencies() {
@@ -609,6 +617,8 @@ void Analyzer::initialize_filtered_columns() throw (AnalyzerException) {
 	MetaFiltered* effect_hq = NULL;
 	MetaFiltered* se_hq = NULL;
 
+	unsigned int heap_size = 0;
+
 	stringstream string_stream;
 
 	if (gwafile == NULL) {
@@ -619,6 +629,15 @@ void Analyzer::initialize_filtered_columns() throw (AnalyzerException) {
 		maf_levels = gwafile->get_descriptor()->get_threshold(Descriptor::MAF);
 		imp_levels = gwafile->get_descriptor()->get_threshold(Descriptor::IMP);
 		snp_hq = gwafile->get_descriptor()->get_threshold(Descriptor::SNP_HQ);
+
+		if (gwafile->get_estimated_size() > numeric_limits<unsigned int>::max()) {
+			heap_size = Meta::HEAP_SIZE / 3;
+		} else {
+			heap_size = ((unsigned int)gwafile->get_estimated_size()) / 3;
+			if (heap_size == 0) {
+				heap_size = 1;
+			}
+		}
 
 		numeric_metas_it = numeric_metas.begin();
 		while (numeric_metas_it != numeric_metas.end()) {
@@ -646,7 +665,7 @@ void Analyzer::initialize_filtered_columns() throw (AnalyzerException) {
 			numeric_metas_it = numeric_metas.begin();
 			while (numeric_metas_it != numeric_metas.end()) {
 				if (*numeric_metas_it != NULL) {
-					filtered_meta = new MetaFiltered(*numeric_metas_it, gwafile->get_estimated_size());
+					filtered_meta = new MetaFiltered(*numeric_metas_it, heap_size);
 
 					filtered_meta->set_common_name((*numeric_metas_it)->get_common_name());
 					if (strcmp((*numeric_metas_it)->get_common_name(), Descriptor::FREQLABEL) == 0) {
@@ -676,7 +695,7 @@ void Analyzer::initialize_filtered_columns() throw (AnalyzerException) {
 		}
 
 		if ((effect != NULL) && (freqlabel != NULL) && (oevar_imp != NULL) && (se != NULL)) {
-			filtered_meta = new MetaFiltered(effect, gwafile->get_estimated_size());
+			filtered_meta = new MetaFiltered(effect, heap_size);
 
 			filtered_meta->set_common_name(EFFECT_HQ);
 			filtered_meta->set_actual_name(EFFECT_HQ);
@@ -695,7 +714,7 @@ void Analyzer::initialize_filtered_columns() throw (AnalyzerException) {
 		}
 
 		if (pvalue != NULL) {
-			filtered_meta = new MetaFiltered(pvalue, gwafile->get_estimated_size());
+			filtered_meta = new MetaFiltered(pvalue, heap_size);
 
 			filtered_meta->set_common_name(PVALUE_FROM0TO1);
 			filtered_meta->set_actual_name(PVALUE_FROM0TO1);
@@ -710,7 +729,7 @@ void Analyzer::initialize_filtered_columns() throw (AnalyzerException) {
 		}
 
 		if ((pvalue != NULL) && (freqlabel != NULL) && (oevar_imp != NULL) && (se != NULL)) {
-			filtered_meta = new MetaFiltered(pvalue, gwafile->get_estimated_size());
+			filtered_meta = new MetaFiltered(pvalue, heap_size);
 
 			filtered_meta->set_common_name(PVALUE_HQ_1);
 			filtered_meta->set_actual_name(PVALUE_HQ_1);
@@ -730,7 +749,7 @@ void Analyzer::initialize_filtered_columns() throw (AnalyzerException) {
 		}
 
 		if ((pvalue != NULL) && (freqlabel != NULL) && (oevar_imp != NULL) && (se != NULL)) {
-			filtered_meta = new MetaFiltered(pvalue, gwafile->get_estimated_size());
+			filtered_meta = new MetaFiltered(pvalue, heap_size);
 
 			filtered_meta->set_common_name(PVALUE_HQ_2);
 			filtered_meta->set_actual_name(PVALUE_HQ_2);
@@ -750,7 +769,7 @@ void Analyzer::initialize_filtered_columns() throw (AnalyzerException) {
 		}
 
 		if ((pvalue != NULL) && (freqlabel != NULL) && (se != NULL) && (effect != NULL)) {
-			filtered_meta = new MetaFiltered(pvalue, gwafile->get_estimated_size());
+			filtered_meta = new MetaFiltered(pvalue, heap_size);
 
 			filtered_meta->set_common_name(PVALUE_MAF_1);
 			filtered_meta->set_actual_name(PVALUE_MAF_1);
@@ -771,7 +790,7 @@ void Analyzer::initialize_filtered_columns() throw (AnalyzerException) {
 		}
 
 		if ((pvalue != NULL) && (freqlabel != NULL) && (se != NULL) && (effect != NULL)) {
-			filtered_meta = new MetaFiltered(pvalue, gwafile->get_estimated_size());
+			filtered_meta = new MetaFiltered(pvalue, heap_size);
 
 			filtered_meta->set_common_name(PVALUE_MAF_2);
 			filtered_meta->set_actual_name(PVALUE_MAF_2);
@@ -792,7 +811,7 @@ void Analyzer::initialize_filtered_columns() throw (AnalyzerException) {
 		}
 
 		if ((pvalue != NULL) && (oevar_imp != NULL) && (se != NULL) && (effect != NULL)) {
-			filtered_meta = new MetaFiltered(pvalue, gwafile->get_estimated_size());
+			filtered_meta = new MetaFiltered(pvalue, heap_size);
 
 			filtered_meta->set_common_name(PVALUE_IMP_1);
 			filtered_meta->set_actual_name(PVALUE_IMP_1);
@@ -813,7 +832,7 @@ void Analyzer::initialize_filtered_columns() throw (AnalyzerException) {
 		}
 
 		if ((pvalue != NULL) && (oevar_imp != NULL) && (se != NULL) && (effect != NULL)) {
-			filtered_meta = new MetaFiltered(pvalue, gwafile->get_estimated_size());
+			filtered_meta = new MetaFiltered(pvalue, heap_size);
 
 			filtered_meta->set_common_name(PVALUE_IMP_2);
 			filtered_meta->set_actual_name(PVALUE_IMP_2);

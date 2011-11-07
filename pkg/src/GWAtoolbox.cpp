@@ -893,6 +893,11 @@ SEXP perform_quality_check(SEXP external_descriptor_pointer, SEXP resource_path)
 	SEXP plot = R_NilValue;
 	SEXP name = R_NilValue;
 	SEXP path = R_NilValue;
+	SEXP stats = R_NilValue;
+
+	clock_t start_time = 0;
+	double execution_time = 0.0;
+	double used_memory = 0.0;
 
 	if (external_descriptor_pointer == R_NilValue) {
 		error("\nThe external Descriptor pointer argument is NULL.");
@@ -927,6 +932,8 @@ SEXP perform_quality_check(SEXP external_descriptor_pointer, SEXP resource_path)
 	char* result_html_path = NULL;
 
 	try {
+		start_time = clock();
+
 		Analyzer analyzer;
 
 		gwa_file = new GwaFile(descriptor, check_functions, 7);
@@ -941,13 +948,19 @@ SEXP perform_quality_check(SEXP external_descriptor_pointer, SEXP resource_path)
 
 		analyzer.process_data();
 
+		used_memory = analyzer.get_memory_usage();
+
 		analyzer.finalize_processing();
 
 		analyzer.create_plots(single_file_plots);
 		analyzer.create_combined_qqplots(single_file_plots);
 		analyzer.create_combined_boxplots(combined_boxplots);
 
-		PROTECT(output_robj = allocVector(VECSXP, 4));
+		analyzer.print_txt_report();
+		analyzer.print_csv_report();
+		analyzer.print_html_report(&result_html_path, single_file_plots, c_resource_path);
+
+		PROTECT(output_robj = allocVector(VECSXP, 5));
 
 		if (single_file_plots.size() > 0) {
 			PROTECT(single_file_plots_robj = allocVector(VECSXP, single_file_plots.size()));
@@ -969,10 +982,6 @@ SEXP perform_quality_check(SEXP external_descriptor_pointer, SEXP resource_path)
 			UNPROTECT(1);
 		}
 
-		analyzer.print_txt_report();
-		analyzer.print_csv_report();
-		analyzer.print_html_report(&result_html_path, single_file_plots, c_resource_path);
-
 		PROTECT(name = allocVector(STRSXP, 1));
 		SET_STRING_ELT(name, 0, mkChar(gwa_file->get_descriptor()->get_name()));
 		UNPROTECT(1);
@@ -981,10 +990,19 @@ SEXP perform_quality_check(SEXP external_descriptor_pointer, SEXP resource_path)
 		SET_STRING_ELT(path, 0, mkChar(result_html_path));
 		UNPROTECT(1);
 
+		execution_time = (clock() - start_time)/(double)CLOCKS_PER_SEC;
+
+		PROTECT(stats = allocVector(REALSXP, 2));
+		REAL(stats)[0] = execution_time;
+		REAL(stats)[1] = used_memory;
+		UNPROTECT(1);
+
 		SET_VECTOR_ELT(output_robj, 0, name);
 		SET_VECTOR_ELT(output_robj, 1, path);
 		SET_VECTOR_ELT(output_robj, 2, single_file_plots_robj);
 		SET_VECTOR_ELT(output_robj, 3, common_boxplots_robj);
+		SET_VECTOR_ELT(output_robj, 4, stats);
+
 		UNPROTECT(1);
 
 		analyzer.close_gwafile();
@@ -1214,51 +1232,106 @@ SEXP perform_formatting(SEXP external_descriptor_pointer) {
 /*
  *	Description:
  *		Entry point for a stand-alone application.
- *		During compilation needs to be linked to R and GSL libraries.
+ *		During compilation needs to be linked to R library.
  *	Arguments:
  *		argv[1]	--	METAL-like script file name
  */
 int main(int args, char** argv) {
-	char fileSep = '\\';
+/*	char fileSep = '\\';
 	const char* resLocation = "inst\\extdata\\";
 
 	vector<Descriptor*>* ds = NULL;
 	vector<Descriptor*>::iterator ds_it;
-	vector<const char*>* columns = NULL;
-	vector<const char*>::iterator columns_it;
 	GwaFile* gwa_file = NULL;
+	double used_memory = 0.0;*/
 
-	void (GwaFile::*check_functions[8])(Descriptor*) = {
-			&GwaFile::check_filters,
-			&GwaFile::check_thresholds,
-			&GwaFile::check_prefix,
-			&GwaFile::check_casesensitivity,
-			&GwaFile::check_missing_value,
-			&GwaFile::check_separators,
-			&GwaFile::check_order,
-			&GwaFile::check_genomiccontrol
-	};
+	/* gwasqc() functionality */
+/*	try {
+		Analyzer analyzer;
 
-	double inflation_factor = numeric_limits<double>::quiet_NaN();
-	int n_total = 0;
-	int n_filtered = 0;
+		void (GwaFile::*check_functions[7])(Descriptor*) = {
+				&GwaFile::check_filters,
+				&GwaFile::check_thresholds,
+				&GwaFile::check_prefix,
+				&GwaFile::check_casesensitivity,
+				&GwaFile::check_missing_value,
+				&GwaFile::check_separators,
+				&GwaFile::check_filesize
+		};
 
-	try {
+		vector<Plot*> plots;
+		vector<Plot*> combined_boxplots;
+
+		char* html_path = NULL;
+
+		ds = Descriptor::process_instructions("qc_script.txt", fileSep);
+
+		for (ds_it = ds->begin(); ds_it != ds->end(); ds_it++) {
+			gwa_file = new GwaFile(*ds_it, check_functions, 7);
+
+			cout << gwa_file->get_descriptor()->get_full_path() << endl;
+			cout << gwa_file->get_estimated_size() << endl;
+
+			analyzer.open_gwafile(gwa_file);
+
+			analyzer.process_header();
+
+			analyzer.initialize_column_dependencies();
+			analyzer.initialize_filtered_columns();
+			analyzer.initialize_columns_ratios();
+
+			analyzer.process_data();
+
+			used_memory = analyzer.get_memory_usage();
+			cout << used_memory << " Mb" << endl;
+
+			analyzer.finalize_processing();
+
+			analyzer.create_plots(plots);
+			analyzer.create_combined_qqplots(plots);
+			analyzer.create_combined_boxplots(combined_boxplots);
+
+			analyzer.print_html_report(&html_path, plots, resLocation);
+			analyzer.print_txt_report();
+			analyzer.print_csv_report();
+
+			analyzer.close_gwafile();
+
+			delete gwa_file;
+			delete (*ds_it);
+		}
+
+		ds->clear();
+	} catch (Exception &e) {
+		cout << endl;
+		cout << e.what() << endl;
+	}*/
+
+	/* gwasformat() functionality */
+/*	try {
 		Formatter formatter;
+
+		void (GwaFile::*check_functions[8])(Descriptor*) = {
+				&GwaFile::check_filters,
+				&GwaFile::check_thresholds,
+				&GwaFile::check_prefix,
+				&GwaFile::check_casesensitivity,
+				&GwaFile::check_missing_value,
+				&GwaFile::check_separators,
+				&GwaFile::check_order,
+				&GwaFile::check_genomiccontrol
+		};
+
+		double inflation_factor = numeric_limits<double>::quiet_NaN();
+		int n_total = 0;
+		int n_filtered = 0;
 
 		ds = Descriptor::process_instructions("QC_script_format.txt", fileSep);
 
 		for (ds_it = ds->begin(); ds_it != ds->end(); ds_it++) {
-			cout << "File: " << (*ds_it)->get_name() << endl;
-
-			cout << "Ordered columns:";
-			columns = (*ds_it)->get_reordered_columns();
-			for (columns_it = columns->begin(); columns_it != columns->end(); columns_it++) {
-				cout << " " << *columns_it;
-			}
-			cout << endl;
-
 			gwa_file = new GwaFile(*ds_it, check_functions, 8);
+
+			cout << gwa_file->get_descriptor()->get_full_path() << endl;
 
 			formatter.open_gwafile(gwa_file);
 			formatter.process_header();
@@ -1277,51 +1350,13 @@ int main(int args, char** argv) {
 			formatter.close_gwafile();
 
 			delete gwa_file;
-			delete *ds_it;
+			delete (*ds_it);
 		}
-
-	/*	GwaFile gwaf(ds->at(0));
-
-		cout << gwaf.get_descriptor()->get_full_path() << endl;
-
-		Analyzer analyzer;
-
-		analyzer.open_gwafile(&gwaf);
-		analyzer.process_header();
-		analyzer.initialize_column_dependencies();
-		analyzer.initialize_filtered_columns();
-		analyzer.initialize_columns_ratios();
-		analyzer.process_data();
-		analyzer.finalize_processing();
-
-
-		analyzer.create_plots(plots);
-		analyzer.create_combined_qqplots(plots);
-		analyzer.create_combined_boxplots(combined_boxplots);
-
-		for (unsigned int i = 0; i < plots.size(); i++) {
-			cout << plots.at(i)->get_name() << " " << plots.at(i)->get_title() << endl;
-		}
-
-		for (unsigned int i = 0; i < combined_boxplots.size(); i++) {
-			cout << combined_boxplots.at(i)->get_name() << " " << combined_boxplots.at(i)->get_title() << endl;
-		}
-
-		analyzer.print_html_report(&html_path, plots, resLocation);
-		analyzer.print_txt_report();
-		analyzer.print_csv_report();
-
-		vector<const char*> bx_temp = vector<const char*>();
-		bx_temp.push_back("hello1");
-		bx_temp.push_back("hello2");
-
-		cout << html_path << endl;
-
-		analyzer.close_gwafile();*/
+		ds->clear();
 	} catch (Exception &e) {
 		cout << endl;
 		cout << e.what() << endl;
-	}
+	}*/
 
 	return 0;
 }

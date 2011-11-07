@@ -219,7 +219,6 @@ double Formatter::calculate_lambda(int& n_total, int& n_filtered) throw (Formatt
 	double* new_data = NULL;
 	int current_heap_size = HEAP_SIZE;
 
-	double median = 0.0;
 	double lambda = numeric_limits<double>::quiet_NaN();
 
 	n_total = 0;
@@ -518,19 +517,12 @@ double Formatter::calculate_lambda(int& n_total, int& n_filtered) throw (Formatt
 
 	if (n > 0) {
 		for (int i = 0; i < n; i++) {
-			data[i] = Rf_qchisq(data[i], 1, 0, 0);
+			data[i] = pow(Rf_qnorm5(0.5 * data[i], 0.0, 1.0, 0, 0), 2.0);
 		}
 
 		qsort(data, n, sizeof(double), auxiliary::dblcmp);
 
-		/* DT: in future replace by auxiliary::stats_median() */
-		if (n % 2 == 0) {
-			median = (data[n / 2 - 1] + data[n / 2]) / 2.0;
-		} else {
-			median = data[n / 2];
-		}
-
-		lambda = median / Rf_qchisq(0.5, 1, 0, 0);
+		lambda =  auxiliary::stats_median_from_sorted_data(data, n) / Rf_qchisq(0.5, 1.0, 0, 0);
 	}
 
 	free(data);

@@ -93,7 +93,7 @@ pgwasqc <- function(script, processes) {
 	elapsed_time <- proc.time() - start_time
 	cat("Done (", elapsed_time[3], " sec).\n", sep="")
 	
-	cat("Processing... ")
+	cat("Processing...\n")
 	start_time <- proc.time()
 	
 	cluster_result <- clusterApply(clusters, descriptors_robj, function(x) {
@@ -106,6 +106,11 @@ pgwasqc <- function(script, processes) {
 		plots[[3]] <- NULL				
 		return(plots)
 	})
+
+	for (i in seq(1, length(cluster_result), 1)) {
+		cat("  ", cluster_result[[i]][[1]], " ", sep="")
+		cat("(", format(cluster_result[[i]][[4]][1], digits=2), " sec, ", format(cluster_result[[i]][[4]][2], digits=2), " Mb)\n", sep="")
+	}
 			
 	elapsed_time <- proc.time() - start_time
 	cat("Done (", elapsed_time[3], " sec).\n", sep="")

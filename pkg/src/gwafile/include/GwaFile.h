@@ -34,7 +34,7 @@ private:
 	double inflation_factor;
 	char header_separator;
 	char data_separator;
-	unsigned int estimated_size;
+	unsigned long int estimated_size;
 
 public:
 	GwaFile(Descriptor* descriptor) throw (GwaFileException);
@@ -49,7 +49,7 @@ public:
 	double get_inflation_factor();
 	char get_header_separator();
 	char get_data_separator();
-	unsigned int get_estimated_size();
+	unsigned long int get_estimated_size();
 
 	void check_filters(Descriptor* descriptor) throw (GwaFileException);
 	void check_thresholds(Descriptor* descriptor) throw (GwaFileException);

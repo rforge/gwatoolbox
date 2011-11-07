@@ -23,6 +23,7 @@
 #include <vector>
 #include <iostream>
 #include <iomanip>
+#include <set>
 
 #include "../../../auxiliary/include/auxiliary.h"
 #include "Meta.h"
@@ -48,7 +49,7 @@ public:
 	bool is_na();
 	void print(ostream& stream);
 	void print_html(ostream& stream, char path_separator);
-	int get_memory_usage();
+	double get_memory_usage();
 };
 
 #endif

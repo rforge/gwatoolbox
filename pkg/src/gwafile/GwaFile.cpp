@@ -81,7 +81,7 @@ char GwaFile::get_data_separator() {
 	return data_separator;
 }
 
-unsigned int GwaFile::get_estimated_size() {
+unsigned long int GwaFile::get_estimated_size() {
 	return estimated_size;
 }
 

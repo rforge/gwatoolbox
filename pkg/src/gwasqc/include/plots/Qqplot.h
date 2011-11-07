@@ -51,6 +51,8 @@ private:
 public:
 	virtual ~Qqplot();
 
+	void set_lambda(int group, double lambda) throw (PlotException);
+
 	const double* get_x();
 	const double* get_y();
 	const int* get_size();

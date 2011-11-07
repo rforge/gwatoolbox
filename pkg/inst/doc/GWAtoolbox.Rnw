@@ -817,6 +817,13 @@ library(GWAtoolbox)
 gwasqc("GWASQC_script.txt")
 @
 
+\section{Parallel Processing}
+\emph{gwasqc()} processes GWAS data files sequentially, one after another.
+It makes possible to handle very large files on desktop machines with relatively small amounts of available main memory.
+\emph{pgwasqc()} function is analogous to \emph{gwasqc()} and processes GWAS data files in parallel.
+The processing of several files is distributed among available CPUs at an additional cost of main memory.
+The computational time of \emph{pgwasqc} highly depends on the configuration of file storage and synchronization of I/O operations.
+
 \section{Between-study comparisons}
 \subsection{Comparing skewness and kurtosis of effect size distribution}
 \label{section:comparing_skewness_and_kurtosis_of_effect_size_distribution}
@@ -921,8 +928,17 @@ text(Z$median_n, Z$mean_se, labels=Z$study, pos=c(2,4,2,1,2))
 \end{example} 
 
 \section{Additional Tools}
-In addition to the facilities for the data QC, \emph{GWAtoolbox} also includes facilities including routines for the data manipulation after the GWAS meta-analysis has been done and functions that facilitates result annotation.
-These extensions are currently being debugged and will be made available soon.
+
+\subsection{GWAS Data Files Formatting}
+The GWAS data files from distinct studies usually have different formatting.
+This includes differences in naming and ordering of columns, column separators.
+For the automated analysis of data it is more convenient to have uniform format across all the files.
+The \emph{gwasformat()} function and its prallel version \emph{pgwasformat()} allow to quickly transform GWAS data files into a uniform format.
+In addition to the possiblity to rename and re-order columns, these functions calculate effective sample size, inflation factors and apply genomic control of P-values and standard errors.
+The column separator is set to tabulation in all processed files.
+
+%In addition to the facilities for the data QC, \emph{GWAtoolbox} also includes facilities including routines for the data manipulation after the GWAS meta-analysis has been done and functions that facilitates result annotation.
+%These extensions are currently being debugged and will be made available soon.
 
 %\subsection{Skewness and Kurtosis Check}
 %\label{section:skewness_and_kurtosis_check}

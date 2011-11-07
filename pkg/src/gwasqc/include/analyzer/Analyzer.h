@@ -115,7 +115,7 @@ public:
 	void initialize_columns_ratios() throw (AnalyzerException);
 	void process_data() throw (AnalyzerException);
 	void finalize_processing() throw (AnalyzerException);
-	unsigned int get_memory_usage();
+	double get_memory_usage();
 
 	void print_txt_report() throw (AnalyzerException);
 	void print_csv_report() throw (AnalyzerException);

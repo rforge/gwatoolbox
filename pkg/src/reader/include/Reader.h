@@ -45,7 +45,7 @@ public:
 	virtual void reset() throw (ReaderException) = 0;
 	virtual bool eof() = 0;
 	virtual bool is_compressed() = 0;
-	virtual unsigned int estimate_lines_count() throw (ReaderException);
+	virtual unsigned long int estimate_lines_count() throw (ReaderException);
 	virtual void detect_field_separators(char* header_separator, char* data_separator) throw (ReaderException);
 };
 

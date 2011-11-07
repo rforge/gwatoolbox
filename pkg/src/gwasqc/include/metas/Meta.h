@@ -36,6 +36,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <ostream>
+#include <map>
 #include "MetaException.h"
 #include "../plots/PlotException.h"
 
@@ -71,7 +72,7 @@ public:
 	virtual const char* get_full_name();
 	virtual const char* get_description();
 	virtual const char* get_na_marker();
-	virtual int get_memory_usage();
+	virtual double get_memory_usage();
 
 	virtual void put(char* value) throw (MetaException) = 0;
 	virtual void finalize() throw (MetaException) = 0;

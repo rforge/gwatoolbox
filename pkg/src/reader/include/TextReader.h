@@ -51,7 +51,7 @@ public:
 	void reset() throw (ReaderException);
 	bool eof();
 	bool is_compressed();
-	unsigned int estimate_lines_count() throw (ReaderException);
+	unsigned long int estimate_lines_count() throw (ReaderException);
 	void detect_field_separators(char* header_separator, char* data_separator) throw (ReaderException);
 };
 

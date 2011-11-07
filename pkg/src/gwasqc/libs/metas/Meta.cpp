@@ -159,6 +159,6 @@ const char* Meta::get_na_marker() {
 	return na_marker;
 }
 
-int Meta::get_memory_usage() {
-	return 0;
+double Meta::get_memory_usage() {
+	return 0.0;
 }

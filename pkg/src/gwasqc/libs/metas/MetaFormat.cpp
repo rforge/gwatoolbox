@@ -86,6 +86,6 @@ void MetaFormat::print_html(ostream& stream, char path_separator) {
 	stream << "</div>";
 }
 
-int MetaFormat::get_memory_usage() {
-	return 0;
+double MetaFormat::get_memory_usage() {
+	return 0.0;
 }

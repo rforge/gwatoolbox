@@ -32,7 +32,7 @@ protected:
 
 public:
 	MetaImplausibleStrict(unsigned int heap_size = Meta::HEAP_SIZE) throw (MetaException);
-	MetaImplausibleStrict(double less, double greater, int heap_size = Meta::HEAP_SIZE) throw (MetaException);
+	MetaImplausibleStrict(double less, double greater, unsigned int heap_size = Meta::HEAP_SIZE) throw (MetaException);
 	virtual ~MetaImplausibleStrict();
 	void put(char* value) throw (MetaException);
 	void print(ostream& stream);

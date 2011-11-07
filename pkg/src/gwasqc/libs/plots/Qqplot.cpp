@@ -257,6 +257,15 @@ Qqplot* Qqplot::merge(Qqplot* to, Qqplot* from) throw (PlotException) {
 	return qqplot;
 }
 
+void Qqplot::set_lambda(int group, double lambda) throw (PlotException) {
+	if ((group <= 0) || (group > count)) {
+		throw PlotException("Qqplot", "set_lambda( int, double )", __LINE__, 1, "group");
+	}
+
+	group -= 1;
+	lambdas[group] = lambda;
+}
+
 const double* Qqplot::get_x() {
 	return x;
 }

@@ -149,8 +149,8 @@ void MetaGroup::print_html(ostream& stream, char path_separator) {
 	}
 }
 
-int MetaGroup::get_memory_usage() {
-	int memory = 0;
+double MetaGroup::get_memory_usage() {
+	unsigned long int memory = 0;
 
 	for (groups_it = groups.begin(); groups_it != groups.end(); groups_it++) {
 		memory += (strlen(groups_it->first) + 1) * sizeof(char);
@@ -158,5 +158,5 @@ int MetaGroup::get_memory_usage() {
 		memory += sizeof(char*);
 	}
 
-	return memory;
+	return memory / 1048576.0;
 }

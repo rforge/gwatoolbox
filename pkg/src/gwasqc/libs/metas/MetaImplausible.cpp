@@ -23,7 +23,7 @@ MetaImplausible::MetaImplausible(unsigned int heap_size) throw (MetaException): 
 
 }
 
-MetaImplausible::MetaImplausible(double less, double greater, int heap_size) throw (MetaException): MetaNumeric(heap_size) {
+MetaImplausible::MetaImplausible(double less, double greater, unsigned int heap_size) throw (MetaException): MetaNumeric(heap_size) {
 	this->less = less;
 	this->greater = greater;
 

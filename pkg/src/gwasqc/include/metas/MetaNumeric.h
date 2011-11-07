@@ -81,7 +81,7 @@ public:
 	bool is_na();
 	void print(ostream& stream);
 	void print_html(ostream& stream, char path_separator);
-	int get_memory_usage();
+	double get_memory_usage();
 
 	const char* get_plot_name();
 	bool is_plottable();

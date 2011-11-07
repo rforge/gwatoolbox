@@ -50,7 +50,7 @@ const char* Reader::get_file_name() {
 	return file_name;
 }
 
-unsigned int Reader::estimate_lines_count() throw (ReaderException) {
+unsigned long int Reader::estimate_lines_count() throw (ReaderException) {
 	return 0;
 }
 

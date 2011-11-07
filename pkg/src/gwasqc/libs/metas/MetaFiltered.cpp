@@ -137,7 +137,7 @@ void MetaFiltered::finalize() throw (MetaException) {
 				skew = auxiliary::stats_skewness(data, n, mean, sd);
 				kurtosis = auxiliary::stats_kurtosis(data, n, mean, sd);
 
-				qsort(data, n, sizeof(double), dblcmp);
+				qsort(data, n, sizeof(double), auxiliary::dblcmp);
 
 				median = auxiliary::stats_median_from_sorted_data(data, n);
 
@@ -147,26 +147,6 @@ void MetaFiltered::finalize() throw (MetaException) {
 
 				min = data[0];
 				max = data[n - 1];
-
-				if (create_qqplot) {
-					double* chi_data = NULL;
-					double lambda = 0;
-
-					if ((chi_data = (double*)malloc(n * sizeof(double))) == NULL) {
-						throw MetaException("MetaFiltered", "finalize()", __LINE__, 2, n * sizeof(double));
-					}
-
-					for (int i = 0; i < n; i++) {
-						chi_data[i] = Rf_qchisq(data[i], 1, 0, 0);
-					}
-
-					qsort(chi_data, n, sizeof(double), dblcmp);
-					lambda = auxiliary::stats_median_from_sorted_data(chi_data, n) / Rf_qchisq(0.5, 1, 0, 0);
-					free(chi_data);
-					chi_data = NULL;
-
-					qqplot = Qqplot::create(get_description(), get_color(), data, lambda, n);
-				}
 
 				if (create_histogram) {
 					histogram = Histogram::create(actual_name, data, n, 1000);
@@ -181,6 +161,21 @@ void MetaFiltered::finalize() throw (MetaException) {
 						boxplot->set_title(get_description());
 						boxplot->set_quantiles(quantiles[0][1], quantiles[3][1], quantiles[4][1], quantiles[5][1], quantiles[8][1]);
 					}
+				}
+
+				if (create_qqplot) {
+					double lambda = numeric_limits<double>::quiet_NaN();
+
+					qqplot = Qqplot::create(get_description(), get_color(), data, numeric_limits<double>::quiet_NaN(), n);
+
+					for (int i = 0; i < n; i++) {
+						data[i] = pow(Rf_qnorm5(0.5 * data[i], 0.0, 1.0, 0, 0), 2.0);
+					}
+
+					qsort(data, n, sizeof(double), auxiliary::dblcmp);
+					lambda = auxiliary::stats_median_from_sorted_data(data, n) / Rf_qchisq(0.5, 1.0, 0, 0);
+
+					qqplot->set_lambda(1, lambda);
 				}
 			} else if (create_qqplot) {
 				qqplot = Qqplot::create(get_description(), get_color(), data, numeric_limits<double>::quiet_NaN(), 0);

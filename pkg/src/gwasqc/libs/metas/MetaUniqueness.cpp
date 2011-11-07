@@ -155,8 +155,8 @@ void MetaUniqueness::print_html(ostream& stream, char path_separator) {
 	}
 }
 
-int MetaUniqueness::get_memory_usage() {
-	int memory = 0;
+double MetaUniqueness::get_memory_usage() {
+	unsigned long int memory = 0;
 
 	if (data != NULL) {
 		for (int i = 0; i < n; i++) {
@@ -166,5 +166,5 @@ int MetaUniqueness::get_memory_usage() {
 
 	memory += n * sizeof(char*);
 
-	return memory;
+	return memory / 1048576.0;
 }

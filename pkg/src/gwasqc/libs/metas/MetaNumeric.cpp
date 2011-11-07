@@ -383,20 +383,6 @@ const char* MetaNumeric::get_color() {
 	return color;
 }
 
-/*int MetaNumeric::compare (const void* first, const void* second) {
-	double d_first = *(double*)first;
-	double d_second = *(double*)second;
-
-	if (d_first < d_second) {
-		return -1;
-	}
-	else if (d_first > d_second) {
-		return 1;
-	}
-
-	return 0;
-}*/
-
 bool MetaNumeric::is_numeric() {
 	return numeric;
 }
@@ -451,11 +437,11 @@ double MetaNumeric::get_quantile(double quantile) {
 	return numeric_limits<double>::quiet_NaN();
 }
 
-int MetaNumeric::get_memory_usage() {
-	int memory = 0;
+double MetaNumeric::get_memory_usage() {
+	unsigned long int memory = 0;
 
 	memory += n * sizeof(double);
 
-	return memory;
+	return memory / 1048576.0;
 }
 

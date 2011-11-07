@@ -64,7 +64,7 @@ gwasqc <- function(script) {
 	
 	result <- vector()
 	for (i in seq(1, length(descriptors_robj), 1)) {
-		cat("  ", descriptors_robj[[i]][[4]], "\n", sep="")
+		cat("  ", descriptors_robj[[i]][[4]], " ", sep="")
 		local_descriptor <- .Call("Robj2Descriptor", descriptors_robj[[i]])
 		plots <- .Call("perform_quality_check", local_descriptor, resource_path)
 		.Call("delete_descriptor", local_descriptor)
@@ -72,6 +72,7 @@ gwasqc <- function(script) {
 		.plot(plots[[3]])
 		plots[[3]] <- NULL
 		result <- append(result, list(plots))
+		cat("(", format(plots[[4]][1], digits=2), " sec, ", format(plots[[4]][2], digits=2), " Mb)\n", sep="")
 	}
 	
 	elapsed_time <- proc.time() - start_time

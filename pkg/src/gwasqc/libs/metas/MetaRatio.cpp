@@ -73,7 +73,6 @@ void MetaRatio::put(char* value) throw (MetaException) {
 
 	double ratio = source_a->get_value() / source_b->get_value();
 	double p_wald = Rf_pchisq(ratio * ratio, 1.0, 0, 0);
-	/*double p_wald = ratio;*/
 
 	data.insert(pair<double, double>(p_wald, source_a->get_value()));
 }
@@ -125,11 +124,11 @@ void MetaRatio::print_html(ostream& stream, char path_separator) {
 
 }
 
-int MetaRatio::get_memory_usage() {
-	int memory = 0;
+double MetaRatio::get_memory_usage() {
+	unsigned long int memory = 0;
 
 	memory += data.size() * sizeof(double) * 2;
 	memory += MetaRatio::SLICES_CNT * sizeof(double) * 2;
 
-	return memory;
+	return memory / 1048576.0;
 }

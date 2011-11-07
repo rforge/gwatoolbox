@@ -365,8 +365,8 @@ void MetaCrossTable::print_html(ostream& stream, char path_separator) {
 	}
 }
 
-int MetaCrossTable::get_memory_usage() {
-	int memory = 0;
+double MetaCrossTable::get_memory_usage() {
+	unsigned long int memory = 0;
 
 	for (column_it = table.begin(); column_it != table.end(); column_it++) {
 		memory += (column_it->second->size() * (sizeof(double) + sizeof(int)));
@@ -378,5 +378,5 @@ int MetaCrossTable::get_memory_usage() {
 	memory += (x_total.size() * (sizeof(double) + sizeof(int)));
 	memory += (y_total.size() * (sizeof(double) + sizeof(int)));
 
-	return memory;
+	return memory / 1048576.0;
 }
