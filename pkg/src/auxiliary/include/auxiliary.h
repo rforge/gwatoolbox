@@ -63,15 +63,29 @@ namespace auxiliary {
 		return (*end_ptr == '\0');
 	}
 
-	inline int qsort_strcmp (const void* first, const void* second) {
+	inline int qsort_strcmp(const void* first, const void* second) {
 		return strcmp(*(char**)first, *(char**)second);
 	}
 
-	inline bool bool_strcmp (const char* first, const char* second) {
+	inline int qsort_dblcmp_array(const void* first, const void* second) {
+		double d_first = **((double**)first);
+		double d_second = **((double**)second);
+
+		if (d_first < d_second) {
+			return -1;
+		}
+		else if (d_first > d_second) {
+			return 1;
+		}
+
+		return 0;
+	}
+
+	inline bool bool_strcmp(const char* first, const char* second) {
 		return strcmp(first, second) < 0;
 	}
 
-	inline bool bool_strcmp_ignore_case (const char* first, const char* second) {
+	inline bool bool_strcmp_ignore_case(const char* first, const char* second) {
 		return strcmp_ignore_case(first, second) < 0;
 	}
 

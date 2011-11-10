@@ -551,19 +551,23 @@ double Analyzer::get_memory_usage() {
 
 	for (metas_it = metas.begin(); metas_it != metas.end(); metas_it++) {
 		if ((*metas_it) != NULL) {
+//			cout << (*metas_it)->get_common_name() << " " << (*metas_it)->get_memory_usage() << endl;
 			memory_usage += (*metas_it)->get_memory_usage();
 		}
 	}
 
 	for (filtered_metas_it = filtered_metas.begin(); filtered_metas_it != filtered_metas.end(); filtered_metas_it++) {
+//		cout << (*filtered_metas_it)->get_common_name() << " " << (*filtered_metas_it)->get_memory_usage() << endl;
 		memory_usage += (*filtered_metas_it)->get_memory_usage();
 	}
 
 	for (ratio_metas_it = ratio_metas.begin(); ratio_metas_it != ratio_metas.end(); ratio_metas_it++) {
+//		cout << "Ratios " << (*ratio_metas_it)->get_memory_usage() << endl;
 		memory_usage += (*ratio_metas_it)->get_memory_usage();
 	}
 
 	for (cross_table_meta_it = cross_table_metas.begin(); cross_table_meta_it != cross_table_metas.end(); cross_table_meta_it++) {
+//		cout << "CrossTable " << (*cross_table_meta_it)->get_memory_usage() << endl;
 		memory_usage += (*cross_table_meta_it)->get_memory_usage();
 	}
 
@@ -868,8 +872,15 @@ void Analyzer::initialize_columns_ratios() throw (AnalyzerException) {
 	MetaRatio* ratio_meta = NULL;
 	MetaCrossTable* cross_table_meta = NULL;
 
+	unsigned int heap_size = 0;
+
 	if (gwafile == NULL) {
 		return;
+	}
+
+	if ((gwafile->get_estimated_size() > numeric_limits<unsigned int>::max()) ||
+			((heap_size = (unsigned int)gwafile->get_estimated_size()) == 0)) {
+		heap_size = Meta::HEAP_SIZE;
 	}
 
 	filtered_metas_it = filtered_metas.begin();
@@ -896,7 +907,7 @@ void Analyzer::initialize_columns_ratios() throw (AnalyzerException) {
 
 	try {
 		if ((effect_hq != NULL) && (se_hq != NULL)) {
-			ratio_meta = new MetaRatio(effect_hq, se_hq);
+			ratio_meta = new MetaRatio(effect_hq, se_hq, heap_size);
 			ratio_metas.push_back(ratio_meta);
 		}
 

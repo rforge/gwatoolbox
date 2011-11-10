@@ -822,7 +822,7 @@ gwasqc("GWASQC_script.txt")
 It makes possible to handle very large files on desktop machines with relatively small amounts of available main memory.
 \emph{pgwasqc()} function is analogous to \emph{gwasqc()} and processes GWAS data files in parallel.
 The processing of several files is distributed among available CPUs at an additional cost of main memory.
-The computational time of \emph{pgwasqc} highly depends on the configuration of file storage and synchronization of I/O operations.
+The computational time of \emph{pgwasqc()} highly depends on the configuration of file storage and synchronization of I/O operations.
 
 \section{Between-study comparisons}
 \subsection{Comparing skewness and kurtosis of effect size distribution}
@@ -932,10 +932,70 @@ text(Z$median_n, Z$mean_se, labels=Z$study, pos=c(2,4,2,1,2))
 \subsection{GWAS Data Files Formatting}
 The GWAS data files from distinct studies usually have different formatting.
 This includes differences in naming and ordering of columns, column separators.
-For the automated analysis of data it is more convenient to have uniform format across all the files.
+For the automated analysis of data it is more convenient to have uniform format across all the files of interest.
 The \emph{gwasformat()} function and its prallel version \emph{pgwasformat()} allow to quickly transform GWAS data files into a uniform format.
 In addition to the possiblity to rename and re-order columns, these functions calculate effective sample size, inflation factors and apply genomic control of P-values and standard errors.
 The column separator is set to tabulation in all processed files.
+
+\subsubsection{Input Script}
+The structure of input script for \emph{gwasformat()} is identical to the structure of input script for \emph{gwasqc()}.
+Additional commands are supported allowing to rename and reorder columns, enable/disable genomic control.
+Example \ref{ex:full_format_script} illustrates the content of a hypothetical input script file.
+
+\begin{example} 
+\label{ex:full_format_script}
+\begin{verbatim}
+# Rename columns
+RENAME  SNPID     rsId
+RENAME  chr       chrom
+RENAME  position  bp
+RENAME  SE        StdErr
+RENAME  pval      p-value
+RENAME  p         p-value
+RENAME  pvalue    p-value
+
+# Description (meaning) of columns
+ALLELE        coded_all noncoded_all
+CALLRATE      callrate
+CHR           chrom
+EFFECT        beta
+FREQLABEL     AF_coded_all 
+HWE_PVAL      HWE_pval
+IMPUTED       imputed
+IMP_QUALITY   oevar_imp
+MARKER        rsId
+N             n_total
+POSITION      bp
+PVALUE        p-value
+STRAND        strand_genome
+STDERR        StdErr
+USED_FOR_IMP  used_for_imp
+AVPOSTPROB    avpostprob
+
+# Enable computation of inflation factor and genomic control
+GC	ON
+
+# Set filters on minor allele frequency and imputation quality
+HQ_SNP	0.05 0.4
+
+# Enable column re-ordering and specify the order explicitely
+ORDER	ON	chrom bp rsId strand_genome coded_all noncoded_all AF_coded_all 
+
+# Prefix for output files
+PREFIX	pgwasformat_
+
+# Input file with GWA data
+PROCESS  input_file.txt
+\end{verbatim}
+\end{example}
+
+\subsubsection{Renaming Columns}
+
+\subsubsection{Ordering Columns}
+
+\subsubsection{Filtering}
+
+\subsubsection{Inflation Factor and Genomic Control}
 
 %In addition to the facilities for the data QC, \emph{GWAtoolbox} also includes facilities including routines for the data manipulation after the GWAS meta-analysis has been done and functions that facilitates result annotation.
 %These extensions are currently being debugged and will be made available soon.

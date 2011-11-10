@@ -33,7 +33,13 @@ private:
 	MetaNumeric* source_a;
 	MetaNumeric* source_b;
 
-	multimap<double, double> data;
+	int n;
+
+	double** data;
+	double** new_data;
+	double* new_value;
+
+	int current_heap_size;
 
 	double* skewness;
 	double* kurtosis;
@@ -42,7 +48,7 @@ public:
 	static const unsigned int SLICES_CNT;
 	static const double slices[];
 
-	MetaRatio(MetaNumeric* source_a, MetaNumeric* source_b) throw (MetaException);
+	MetaRatio(MetaNumeric* source_a, MetaNumeric* source_b, unsigned int heap_size = Meta::HEAP_SIZE) throw (MetaException);
 	virtual ~MetaRatio();
 
 	MetaNumeric* get_source_a();
