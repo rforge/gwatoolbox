@@ -1237,7 +1237,7 @@ SEXP perform_formatting(SEXP external_descriptor_pointer) {
  *		argv[1]	--	METAL-like script file name
  */
 int main(int args, char** argv) {
-	char fileSep = '\\';
+/*	char fileSep = '\\';
 	const char* resLocation = "inst\\extdata\\";
 
 	vector<Descriptor*>* ds = NULL;
@@ -1245,7 +1245,7 @@ int main(int args, char** argv) {
 	GwaFile* gwa_file = NULL;
 	double used_memory = 0.0;
 
-	/* gwasqc() functionality */
+	 gwasqc() functionality
 	try {
 		Analyzer analyzer;
 
@@ -1264,7 +1264,7 @@ int main(int args, char** argv) {
 
 		char* html_path = NULL;
 
-		ds = Descriptor::process_instructions("qc_script_normal.txt", fileSep);
+		ds = Descriptor::process_instructions("qc_script.txt", fileSep);
 
 		for (ds_it = ds->begin(); ds_it != ds->end(); ds_it++) {
 			gwa_file = new GwaFile(*ds_it, check_functions, 7);
@@ -1305,7 +1305,7 @@ int main(int args, char** argv) {
 	} catch (Exception &e) {
 		cout << endl;
 		cout << e.what() << endl;
-	}
+	}*/
 
 	/* gwasformat() functionality */
 /*	try {

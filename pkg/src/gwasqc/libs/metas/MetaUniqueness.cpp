@@ -162,7 +162,7 @@ double MetaUniqueness::get_memory_usage() {
 		}
 	}
 
-	memory += n * sizeof(char*);
+	memory += current_heap_size * sizeof(char*);
 
 	return memory / 1048576.0;
 }

@@ -181,7 +181,7 @@ void MetaRatio::print_html(ostream& stream, char path_separator) {
 double MetaRatio::get_memory_usage() {
 	unsigned long int memory = 0;
 
-	memory += n * sizeof(double*);
+	memory += current_heap_size * sizeof(double*);
 	memory += n * sizeof(double) * 2;
 	memory += MetaRatio::SLICES_CNT * sizeof(double) * 2;
 

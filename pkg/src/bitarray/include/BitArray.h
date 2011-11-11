@@ -24,7 +24,7 @@
 #include <cstdlib>
 #include <cmath>
 
-#include "BitArrayException.h";
+#include "BitArrayException.h"
 
 using namespace std;
 

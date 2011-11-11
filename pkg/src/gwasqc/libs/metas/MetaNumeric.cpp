@@ -450,7 +450,7 @@ double MetaNumeric::get_quantile(double quantile) {
 double MetaNumeric::get_memory_usage() {
 	unsigned long int memory = 0;
 
-	memory += n * sizeof(double);
+	memory += current_heap_size * sizeof(double);
 
 	return memory / 1048576.0;
 }

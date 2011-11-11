@@ -990,6 +990,7 @@ PROCESS  input_file.txt
 \end{example}
 
 \subsubsection{Renaming Columns}
+The new names for columns in the GWAS data file are specified in the input script with the command \textbf{RENAME}\index{RENAME}.
 
 \subsubsection{Ordering Columns}
 
