@@ -519,12 +519,10 @@ void Analyzer::finalize_processing() throw (AnalyzerException) {
 	try {
 		for (metas_it = metas.begin(); metas_it != metas.end(); metas_it++) {
 			if ((*metas_it) != NULL) {
-				(*metas_it)->finalize();
+				if (strcmp((*metas_it)->get_common_name(), Descriptor::MARKER) == 0) {
+					(*metas_it)->finalize();
+				}
 			}
-		}
-
-		for (filtered_metas_it = filtered_metas.begin(); filtered_metas_it != filtered_metas.end(); filtered_metas_it++) {
-			(*filtered_metas_it)->finalize();
 		}
 
 		for (ratio_metas_it = ratio_metas.begin(); ratio_metas_it != ratio_metas.end(); ratio_metas_it++) {
@@ -533,6 +531,18 @@ void Analyzer::finalize_processing() throw (AnalyzerException) {
 
 		for (cross_table_metas_it = cross_table_metas.begin(); cross_table_metas_it != cross_table_metas.end(); cross_table_metas_it++) {
 			(*cross_table_metas_it)->finalize();
+		}
+
+		for (filtered_metas_it = filtered_metas.begin(); filtered_metas_it != filtered_metas.end(); filtered_metas_it++) {
+			(*filtered_metas_it)->finalize();
+		}
+
+		for (metas_it = metas.begin(); metas_it != metas.end(); metas_it++) {
+			if ((*metas_it) != NULL) {
+				if (strcmp((*metas_it)->get_common_name(), Descriptor::MARKER) != 0) {
+					(*metas_it)->finalize();
+				}
+			}
 		}
 	} catch (Exception &e) {
 		AnalyzerException new_e(e);
@@ -551,23 +561,19 @@ double Analyzer::get_memory_usage() {
 
 	for (metas_it = metas.begin(); metas_it != metas.end(); metas_it++) {
 		if ((*metas_it) != NULL) {
-//			cout << (*metas_it)->get_common_name() << " " << (*metas_it)->get_memory_usage() << endl;
 			memory_usage += (*metas_it)->get_memory_usage();
 		}
 	}
 
 	for (filtered_metas_it = filtered_metas.begin(); filtered_metas_it != filtered_metas.end(); filtered_metas_it++) {
-//		cout << (*filtered_metas_it)->get_common_name() << " " << (*filtered_metas_it)->get_memory_usage() << endl;
 		memory_usage += (*filtered_metas_it)->get_memory_usage();
 	}
 
 	for (ratio_metas_it = ratio_metas.begin(); ratio_metas_it != ratio_metas.end(); ratio_metas_it++) {
-//		cout << "Ratios " << (*ratio_metas_it)->get_memory_usage() << endl;
 		memory_usage += (*ratio_metas_it)->get_memory_usage();
 	}
 
 	for (cross_table_meta_it = cross_table_metas.begin(); cross_table_meta_it != cross_table_metas.end(); cross_table_meta_it++) {
-//		cout << "CrossTable " << (*cross_table_meta_it)->get_memory_usage() << endl;
 		memory_usage += (*cross_table_meta_it)->get_memory_usage();
 	}
 

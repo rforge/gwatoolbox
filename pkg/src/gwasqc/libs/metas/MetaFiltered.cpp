@@ -19,11 +19,13 @@
 
 #include "../../include/metas/MetaFiltered.h"
 
-MetaFiltered::MetaFiltered(MetaNumeric* source, unsigned int heap_size) throw (MetaException) : MetaNumeric(heap_size), source(source)  {
+MetaFiltered::MetaFiltered(MetaNumeric* source, unsigned int heap_size) throw (MetaException) : MetaNumeric(0), source(source), bitarray(NULL)  {
 	affiliate_begin = affiliates.begin();
 	affiliate_end = affiliates.end();
 	condition_begin = conditions.begin();
 	condition_end = conditions.end();
+
+	bitarray = new BitArray(heap_size);
 }
 
 MetaFiltered::~MetaFiltered() {
@@ -33,6 +35,11 @@ MetaFiltered::~MetaFiltered() {
 		delete condition_it->second;
 	}
 	conditions.clear();
+
+	if (bitarray != NULL) {
+		delete bitarray;
+		bitarray = NULL;
+	}
 }
 
 void MetaFiltered::add_dependency(MetaNumeric& meta) {
@@ -56,8 +63,13 @@ void MetaFiltered::put(char* value) throw (MetaException) {
 		if (!source->is_numeric()) {
 			numeric = false;
 			this->value = numeric_limits<double>::quiet_NaN();
+
 			free(data);
 			data = NULL;
+
+			delete bitarray;
+			bitarray = NULL;
+
 			return;
 		}
 
@@ -74,8 +86,13 @@ void MetaFiltered::put(char* value) throw (MetaException) {
 			if (!(*affiliate_it)->is_numeric()) {
 				numeric = false;
 				this->value = numeric_limits<double>::quiet_NaN();
+
 				free(data);
 				data = NULL;
+
+				delete bitarray;
+				bitarray = NULL;
+
 				return;
 			}
 
@@ -90,8 +107,13 @@ void MetaFiltered::put(char* value) throw (MetaException) {
 			if (!condition_it->first->is_numeric()) {
 				numeric = false;
 				this->value = numeric_limits<double>::quiet_NaN();
+
 				free(data);
 				data = NULL;
+
+				delete bitarray;
+				bitarray = NULL;
+
 				return;
 			}
 
@@ -102,36 +124,42 @@ void MetaFiltered::put(char* value) throw (MetaException) {
 			}
 		}
 
-		n += 1;
+		if (source->is_value_saved()) {
+			n += 1;
 
-		if (n > current_heap_size) {
-			current_heap_size += Meta::HEAP_INCREMENT;
-
-			new_data = (double*)realloc(data, current_heap_size * sizeof(double));
-			if (new_data == NULL) {
-				free(data);
-				data = NULL;
-				throw MetaException("MetaFiltered", "put( char* )", __LINE__, 3, current_heap_size * sizeof(double));
-			}
-			data = new_data;
+			value_saved = true;
+			bitarray->set_bit(source->get_n() - 1);
+			this->value = source->get_value();
 		}
-
-		data[n - 1] = source->get_value();
-		this->value = source->get_value();
 	}
 }
 
 void MetaFiltered::finalize() throw (MetaException) {
 	if (source->get_n() <= 0) {
 		numeric = false;
+
 		free(data);
 		data = NULL;
+
+		delete bitarray;
+		bitarray = NULL;
+
 		return;
 	}
 
 	if (numeric) {
 		try {
 			if (n > 0) {
+				free(data);
+				data = NULL;
+
+				data = (double*)malloc((n + 1) * sizeof(double));
+				if (data == NULL) {
+					throw MetaException("MetaFiltered", "MetaFiltered( unsigned int )", __LINE__, 2, (n + 1) * sizeof(double));
+				}
+
+				bitarray->filter(source->get_data(), data, source->get_n());
+
 				mean = auxiliary::stats_mean(data, n);
 				sd = auxiliary::stats_sd(data, n, mean);
 				skew = auxiliary::stats_skewness(data, n, mean, sd);
@@ -190,8 +218,15 @@ void MetaFiltered::finalize() throw (MetaException) {
 		}
 	}
 
-	free(data);
-	data = NULL;
+	if (bitarray != NULL) {
+		delete bitarray;
+		bitarray = NULL;
+	}
+
+	if (data != NULL) {
+		free(data);
+		data = NULL;
+	}
 }
 
 void MetaFiltered::print(ostream& stream) {
@@ -200,5 +235,13 @@ void MetaFiltered::print(ostream& stream) {
 
 void MetaFiltered::print_html(ostream& stream, char path_separator) {
 
+}
+
+double MetaFiltered::get_memory_usage() {
+	unsigned long int memory = 0;
+
+	memory += bitarray->get_total_bytes() * sizeof(unsigned char);
+
+	return memory / 1048576.0;
 }
 

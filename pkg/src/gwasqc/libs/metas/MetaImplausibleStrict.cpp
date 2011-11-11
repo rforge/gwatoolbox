@@ -40,6 +40,7 @@ void MetaImplausibleStrict::put(char* value) throw (MetaException) {
 		if (strcmp(na_marker, value) == 0) {
 			na_value = true;
 			na += 1;
+			value_saved = false;
 			this->value = numeric_limits<double>::quiet_NaN();
 			return;
 		}
@@ -51,6 +52,7 @@ void MetaImplausibleStrict::put(char* value) throw (MetaException) {
 
 		if (*end_ptr != '\0') {
 			numeric = false;
+			value_saved = false;
 			this->value = numeric_limits<double>::quiet_NaN();
 			free(data);
 			data = NULL;
@@ -60,6 +62,7 @@ void MetaImplausibleStrict::put(char* value) throw (MetaException) {
 		if (isnan(d_value)) {
 			na_value = true;
 			na += 1;
+			value_saved = false;
 			this->value = numeric_limits<double>::quiet_NaN();
 			return;
 		}
@@ -67,11 +70,13 @@ void MetaImplausibleStrict::put(char* value) throw (MetaException) {
 		this->value = d_value;
 
 		if (d_value < less) {
+			value_saved = false;
 			n_less += 1;
 			return;
 		}
 
 		if (d_value > greater) {
+			value_saved = false;
 			n_greater += 1;
 			return;
 		}
@@ -90,6 +95,7 @@ void MetaImplausibleStrict::put(char* value) throw (MetaException) {
 			data = new_data;
 		}
 
+		value_saved = true;
 		data[n - 1] = d_value;
 	}
 }

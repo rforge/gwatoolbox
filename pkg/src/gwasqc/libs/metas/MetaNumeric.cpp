@@ -26,7 +26,7 @@ MetaNumeric::MetaNumeric(unsigned int heap_size) throw (MetaException) : Meta(),
 	max(-numeric_limits<double>::infinity()),
 	median(numeric_limits<double>::quiet_NaN()),
 	skew(0.0), kurtosis(0.0),
-	numeric(true), na_value(false), value(numeric_limits<double>::quiet_NaN()),
+	numeric(true), na_value(false), value_saved(false), value(numeric_limits<double>::quiet_NaN()),
 	data(NULL), new_data(NULL), current_heap_size(heap_size),
 	color(NULL), create_histogram(true), create_boxplot(true), create_qqplot(true),
 	histogram(NULL), boxplot(NULL), qqplot(NULL), plot(NULL), print_min(true),
@@ -43,13 +43,11 @@ MetaNumeric::MetaNumeric(unsigned int heap_size) throw (MetaException) : Meta(),
 	quantiles[7][0] = 0.99;
 	quantiles[8][0] = 1.00;
 
-	if (heap_size == 0) {
-		throw MetaException("MetaNumeric", "MetaNumeric( unsigned int )", __LINE__, 1, "heap_size");
-	}
-
-	data = (double*)malloc(heap_size * sizeof(double));
-	if (data == NULL) {
-		throw MetaException("MetaNumeric", "MetaNumeric( unsigned int )", __LINE__, 2, heap_size * sizeof(double));
+	if (heap_size > 0) {
+		data = (double*)malloc(heap_size * sizeof(double));
+		if (data == NULL) {
+			throw MetaException("MetaNumeric", "MetaNumeric( unsigned int )", __LINE__, 2, heap_size * sizeof(double));
+		}
 	}
 }
 
@@ -73,6 +71,7 @@ void MetaNumeric::put(char* value) throw (MetaException) {
 		if (strcmp(na_marker, value) == 0) {
 			na_value = true;
 			na += 1;
+			value_saved = false;
 			this->value = numeric_limits<double>::quiet_NaN();
 			return;
 		}
@@ -84,6 +83,7 @@ void MetaNumeric::put(char* value) throw (MetaException) {
 
 		if (*end_ptr != '\0') {
 			numeric = false;
+			value_saved = false;
 			this->value = numeric_limits<double>::quiet_NaN();
 			free(data);
 			data = NULL;
@@ -93,6 +93,7 @@ void MetaNumeric::put(char* value) throw (MetaException) {
 		if (isnan(d_value)) {
 			na_value = true;
 			na += 1;
+			value_saved = false;
 			this->value = numeric_limits<double>::quiet_NaN();
 			return;
 		}
@@ -112,6 +113,7 @@ void MetaNumeric::put(char* value) throw (MetaException) {
 			data = new_data;
 		}
 
+		value_saved = true;
 		this->value = d_value;
 		data[n - 1] = d_value;
 	}
@@ -387,8 +389,16 @@ bool MetaNumeric::is_numeric() {
 	return numeric;
 }
 
+bool MetaNumeric::is_value_saved() {
+	return value_saved;
+}
+
 double MetaNumeric::get_value() {
 	return value;
+}
+
+const double* MetaNumeric::get_data() {
+	return data;
 }
 
 int MetaNumeric::get_n() {

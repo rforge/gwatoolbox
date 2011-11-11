@@ -22,6 +22,7 @@ PKG_LIBS = $(GWALIBS)
 R_MAKECONF = $(R_HOME)/etc${R_ARCH}/Makeconf   
 
 GWADIRS = 	auxiliary \
+			bitarray \
 			exception \
 			descriptor \
 			reader \
@@ -34,6 +35,7 @@ GWADIRS = 	auxiliary \
 			gwasqc/libs/plots \
 
 GWALIBS = 	auxiliary/*.o \
+			bitarray/*.o \
 			exception/*.o \
 			descriptor/*.o \
 			reader/*.o \

@@ -48,6 +48,7 @@ protected:
 
 	bool numeric;
 	bool na_value;
+	bool value_saved;
 	double value;
 
 	double* data;
@@ -98,7 +99,9 @@ public:
 	Plot* get_plot();
 
 	bool is_numeric();
+	bool is_value_saved();
 	double get_value();
+	const double* get_data();
 	void set_ouptut(bool min, bool max, bool median, bool skewness, bool kurtosis, bool quantiles);
 	int get_n();
 	int get_na();

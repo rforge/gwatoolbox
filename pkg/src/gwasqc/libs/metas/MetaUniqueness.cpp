@@ -23,13 +23,11 @@ MetaUniqueness::MetaUniqueness(unsigned int heap_size) throw (MetaException) : M
 	n(0), na_value(false), data(NULL), new_data(NULL), new_value(NULL),
 	current_heap_size(heap_size) {
 
-	if (heap_size == 0) {
-		throw MetaException("MetaUniqueness", "MetaUniqueness( unsigned int )", __LINE__, 1, "heap_size");
-	}
-
-	data = (char**)malloc(heap_size * sizeof(char*));
-	if (data == NULL) {
-		throw MetaException("MetaUniqueness", "MetaUniqueness( unsigned int )", __LINE__, 2, heap_size * sizeof(char*));
+	if (heap_size > 0) {
+		data = (char**)malloc(heap_size * sizeof(char*));
+		if (data == NULL) {
+			throw MetaException("MetaUniqueness", "MetaUniqueness( unsigned int )", __LINE__, 2, heap_size * sizeof(char*));
+		}
 	}
 }
 

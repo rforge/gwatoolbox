@@ -25,6 +25,7 @@
 
 #include "MetaNumeric.h"
 #include "../expressions/Evaluable.h"
+#include "../../../bitarray/include/BitArray.h"
 
 #include "R.h"
 #include "Rmath.h"
@@ -43,6 +44,8 @@ private:
 	map<MetaNumeric*, Evaluable*>::iterator condition_begin;
 	map<MetaNumeric*, Evaluable*>::iterator condition_end;
 
+	BitArray* bitarray;
+
 public:
 	MetaFiltered(MetaNumeric* source, unsigned int heap_size = Meta::HEAP_SIZE) throw (MetaException);
 	virtual ~MetaFiltered();
@@ -56,6 +59,8 @@ public:
 	void finalize() throw (MetaException);
 	void print(ostream& stream);
 	void print_html(ostream& stream, char path_separator);
+
+	double get_memory_usage();
 };
 
 #endif
