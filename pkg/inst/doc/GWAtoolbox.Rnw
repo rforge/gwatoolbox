@@ -208,8 +208,6 @@ This includes:
 \end{enumerate}
 
 Formal and quality checks of individual studies are performed in \emph{GWAtoolbox} using the \emph{gwasqc()} function.
-% Global checking is performed partially with \emph{gwasqc()} and more thoroughly with the \emph{NAME OF FUNCTION PLEASE PROVIDE()} function.
-%In particular, \emph{gwasqc()} is the core-function of the \emph{GWAtoolbox} package. 
 \emph{gwasqc()} was built to address specific requirements, specifically:
 \begin{enumerate}
 \item it allows rapid file processing and reporting;
@@ -223,7 +221,7 @@ The complete QC workflow can be summarized in four basic steps (see Figure \ref{
 \begin{enumerate}
 \item collect the GWAS data files;
 \item write an input script to process of all GWAS files with the \emph{gwasqc()} function;
-\item run the QC using \emph{gwasqc()}; % first and \emph{NAME OF FUNCTION PLEASE PROVIDE()} then;
+\item run the QC using \emph{gwasqc()};
 \item analyze the QC results to uncover errors or inconsistencies.
 \end{enumerate}
 \begin{figure}[!ht]
@@ -658,34 +656,6 @@ Figure \ref{fig:csv_report_file} shows an example of such file.
 \begin{figure}[!h]
 \begin{center}
 \tiny
-%\scalebox{0.5}{
-%\noindent\makebox[\textwidth]{
-%\begin{tabular}{|l|l|l|l|l|l|l|l|l|l|l|l|l|l|l|}
-%\hline
-%& N & EFFECT & STDERR & PVALUE & MAF & IMPUTED & IMP\_QUALITY & CALLRATE & HWE\_PVAL & STD\_EFFECT\_0.5 & STD\_EFFECT\_0.75 & STD\_EFFECT\_0.95 & STD\_EFFECT\_0.99 & STD\_EFFECT\_1 \\
-%\hline
-%N & 2543887 & 2542617 & 2542422 & 2542617 & 2543887 & 2543887 & 2543887 & 2543887 & NA & NA & NA & NA & NA & NA \\
-%\hline
-%N\_HQ & 2448544 & 2448544 & 2448544 & 2448544 & 2448544 & 2448544 & 2448544 & 2448544 & NA & NA & NA & NA & NA & NA \\
-%\hline
-%N\_NAs & 0 & 1270 & 1270 & 1270 & 0 & 0 & 0 & 0 & NA & NA & NA & NA & NA & NA \\
-%\hline
-%Mean & 516 & -0.00137 & 0.295076 & 0.500823 & 0.230416 & 1 & 0.958868 & 1 & NA & NA & NA & NA & NA & NA \\
-%\hline
-%StdDev & 0 & 0.333379 & 0.158119 & 0.28873 & 0.143312 & 0 & 0.097734 & 0 & NA & NA & NA & NA & NA & NA \\
-%\hline
-%Min & 516 & -8.76038 & 0.17353 & 7.34E-08 & 0.010001 & 1 & 0.300006 & 1 & NA & NA & NA & NA & NA & NA \\
-%\hline
-%Max & 516 & 6.12165 & 2.53341 & 1 & 0.5 & 1 & 1.0467 & 1 & NA & NA & NA & NA & NA & NA \\
-%\hline
-%Median & 516 & -0.00149 & 0.233707 & 0.502629 & 0.217008 & 1 & 0.994577 & 1 & NA & NA & NA & NA & NA & NA \\
-%\hline
-%Skewness & nan & -0.06933 & 2.886758 & -0.00935 & 0.214034 & nan & -3.90226 & nan & NA & -0.00587 & -0.01036 & 0.022903 & 0.040024 & -0.07186 \\
-%\hline
-%Kurtosis & nan & 9.109873 & 11.14145 & -1.20085 & -1.18454 & nan & 16.76683 & nan & NA & 3.297394 & 3.822136 & 4.712606 & 5.861049 & 9.066722 \\
-%\hline
-%\end{tabular}}
-%}
 \begin{tabular}{|l|p{1.8cm}|p{1.8cm}|p{1.8cm}|p{1.8cm}|p{1.8cm}|}
 \hline
 & N & EFFECT & STDERR & PVALUE & MAF \\
@@ -930,16 +900,16 @@ text(Z$median_n, Z$mean_se, labels=Z$study, pos=c(2,4,2,1,2))
 \section{Additional Tools}
 
 \subsection{GWAS Data Files Formatting}
-The GWAS data files from distinct studies usually have different formatting.
-This includes differences in naming and ordering of columns, column separators.
-For the automated analysis of data it is more convenient to have uniform format across all the files of interest.
-The \emph{gwasformat()} function and its prallel version \emph{pgwasformat()} allow to quickly transform GWAS data files into a uniform format.
-In addition to the possiblity to rename and re-order columns, these functions calculate effective sample size, inflation factors and apply genomic control of P-values and standard errors.
-The column separator is set to tabulation in all processed files.
+The format of GWAS data files may differ between studies.
+Inconsistencies in column names, column separators and column ordering are the most common.
+For the automated data analysis it is more convenient to have a uniform format across all the GWAS files of interest.
+The \emph{gwasformat()} function and its parallel version \emph{pgwasformat()} allow to quickly transform GWAS data files into a uniform format.
+In addition to the possiblity to rename and re-order columns, these functions calculate effective sample size, inflation factor and apply genomic control of P-values and standard errors.
+The column separator is replaced with tabulation in all processed files.
 
 \subsubsection{Input Script}
-The structure of input script for \emph{gwasformat()} is identical to the structure of input script for \emph{gwasqc()}.
-Additional commands are supported allowing to rename and reorder columns, enable/disable genomic control.
+The formatting instructions are provided to \emph{gwasformat()} through the input script that is identical to the script required by \emph{gwasqc()}.
+Additional commands are supported allowing to rename and re-order columns, enable/disable genomic control.
 Example \ref{ex:full_format_script} illustrates the content of a hypothetical input script file.
 
 \begin{example} 
@@ -954,7 +924,7 @@ RENAME  pval      p-value
 RENAME  p         p-value
 RENAME  pvalue    p-value
 
-# Description (meaning) of columns
+# Description (meaning) of the columns
 ALLELE        coded_all noncoded_all
 CALLRATE      callrate
 CHR           chrom
@@ -979,7 +949,7 @@ GC	ON
 HQ_SNP	0.05 0.4
 
 # Enable column re-ordering and specify the order explicitely
-ORDER	ON	chrom bp rsId strand_genome coded_all noncoded_all AF_coded_all 
+ORDER	ON	chrom bp rsId strand_genome coded_all noncoded_all
 
 # Prefix for output files
 PREFIX	pgwasformat_
@@ -990,34 +960,132 @@ PROCESS  input_file.txt
 \end{example}
 
 \subsubsection{Renaming Columns}
-The new names for columns in the GWAS data file are specified in the input script with the command \textbf{RENAME}\index{RENAME}.
+The new column names are specified in the input script with the command \textbf{RENAME}\index{RENAME}.
+The command is followed by two words: the first one corresponds to the column name in the original GWAS file, and the second one corresponds to the new column name in the resulting formatted GWAS file.
+The column names must not contain tabulation or whitespace characters.
+
+\begin{example}
+Let's assume to have three input files: \emph{input\_file\_1.txt}, \emph{input\_file\_2.csv} and \emph{input\_file\_3.txt}.
+The files have column named \emph{marker}.
+In file \emph{input\_file\_1.txt} the column should be renamed to \emph{SNPID}.
+While in files \emph{input\_file\_2.csv} and \emph{input\_file\_3.txt} it should be renamed to \emph{rsId}.
+The correct column renaming is as follows:
+\begin{verbatim}
+RENAME   marker SNPID
+PROCESS  input_file_1.txt
+RENAME   marker rsId
+PROCESS  input_file_2.csv
+PROCESS  input_file_3.txt
+\end{verbatim}
+\end{example}
 
 \subsubsection{Ordering Columns}
+By default, \emph{gwasformat()} doesn't change column ordering followed in the original GWAS file.
+This behaviour can be modified for every input file in the input script using the command \textbf{ORDER}\index{ORDER}.
+Table \ref{table:order_cmd} lists all possible arguments.
+\begin{table}[!ht]
+\begin{center}
+\begin{tabular}{|p{4cm}|p{7.5cm}|}
+\hline
+Argument & Description \\
+\hline
+OFF & The original column ordering is preserved in the resulting formatted GWAS file (default) \\
+ON & Columns are re-ordered following the alphabetical ordering \\
+ON column\_1 column\_2 ... & Columns are re-ordered following the specified order: \emph{column\_1 column\_2 ... }. \\
+\hline
+\end{tabular}
+\caption{The list of arguments for the ORDER command.}
+\label{table:order_cmd}
+\end{center}
+\end{table}
+
+\begin{example}
+Let's assume to have three input files: \emph{input\_file\_1.txt}, \emph{input\_file\_2.csv} and \emph{input\_file\_3.txt}.
+Each file contains the following columns in the order as they are listed: \emph{marker}, \emph{chromosome}, \emph{bp}.
+Below are provided commands to rename the column \emph{marker} to \emph{SNPID} and to switch the ordering mode for every input file:
+\begin{verbatim}
+RENAME   marker SNPID
+MARKER   SNPID
+CHR      chromosome
+POSITION bp
+ORDER    ON chromosome bp SNPID
+PROCESS  input_file_1.txt
+ORDER    OFF
+PROCESS  input_file_2.csv
+ORDER    ON
+PROCESS  input_file_3.txt
+\end{verbatim}
+For the input file \emph{input\_file\_1.txt} the columns are re-ordered to: \emph{chromosome}, \emph{bp}, \emph{SNPID}.
+For the input file \emph{input\_file\_2.csv} the original column ordering is preserved: \emph{SNPID}, \emph{chromosome}, \emph{bp}.
+For the input file \emph{input\_file\_3.txt} the columns are re-ordered following the alphabetical ordering: \emph{bp}, \emph{chromosome}, \emph{SNPID}.
+\end{example}
 
 \subsubsection{Filtering}
+\emph{gwasformat()} filters SNPs based on minor allele frequency (MAF) and imputation quality.
+Table \ref{table:snp_filters} lists the default thresholds.
+\begin{table}[!ht]
+\begin{center}
+\begin{tabular}{|l|p{3cm}|}
+\hline
+Default column name & Default thresholds \\
+\hline
+FREQLABEL\index{FREQLABEL} & $> 0.01$ \\
+IMP\_QUALITY\index{IMP\_QUALITY} & $> 0.3$ \\
+\hline
+\end{tabular}
+\caption{The default SNP filters.}
+\label{table:snp_filters}
+\end{center}
+\end{table}
+The default threshold values can be redefined using the command \textbf{HQ\_SNP}\index{HQ\_SNP} for every input file in the input script.
+The command is followed by two values: the first one corresponds to the threshold for the minor allele frequency, and the second one corresponds to the threshold for the imputation quality.
+
+\begin{example}
+If we want to filter SNPs with MAF > 0.03 and with imputation quality > 0.4, we would add the following lines to the input script:
+\begin{verbatim}
+HQ_SNP   0.03 0.4
+PROCESS  input_file_1.txt
+\end{verbatim}
+\end{example}
+
+\begin{example}
+If we want to disable filtering, we would change the input script as follows:
+\begin{verbatim}
+HQ_SNP   0 0
+PROCESS  input_file_1.txt
+\end{verbatim}
+\end{example}
 
 \subsubsection{Inflation Factor and Genomic Control}
+By default the \emph{gwasformat()} doesn't calculate the inflation factor and doesn't apply the genomic control.
+This behaviour can be modified for every input file in the input script using the command \textbf{GC}\index{GC}/\textbf{GENOMICCONTROL}\index{GENOMICCONTROL} as specified below:
+\begin{table}[!ht]
+\begin{center}
+\begin{tabular}{|l|p{8cm}|}
+\hline
+Argument & Description \\
+\hline
+OFF & The inflation factor is not calculated and genomic control is not applied (default). \\
+ON & The inflation factor is calculated. Values in \emph{PVALUE} and \emph{STDERR} columns are corrected and saved to the new columns \emph{PVALUE\_gc} and \emph{STDERR\_gc}, accordingly. Has no effect if \emph{PVALUE} column is not present. \\
+numeric value & The inflation factor is assumed to be equal to the specified \emph{numeric value}. Values in \emph{PVALUE} and \emph{STDERR} columns are corrected and saved to the new columns \emph{PVALUE\_gc} and \emph{STDERR\_gc}, accordingly. \\
+\hline
+\end{tabular}
+\caption{The list of arguments for the GC/GENOMICCONTROL command.}
+\label{table:gc_cmd}
+\end{center}
+\end{table}
+If the inflation factor value is less than 1.0, then the genomic control is not applied.
+
+\begin{example}
+Example
+\end{example}
+
+\subsubsection{Effective Sample Size}
+By default, the \emph{gwasformat()} computes the effective sample size based on \emph{IMP\_QUALITY} and \emph{N} columns.
+The computed values are saved to the new column \emph{N\_effective}.
 
 %In addition to the facilities for the data QC, \emph{GWAtoolbox} also includes facilities including routines for the data manipulation after the GWAS meta-analysis has been done and functions that facilitates result annotation.
 %These extensions are currently being debugged and will be made available soon.
-
-%\subsection{Skewness and Kurtosis Check}
-%\label{section:skewness_and_kurtosis_check}
-%The skewness and kurtosis of standardized effects are calculated during the automatic quality check procedure and reported in CSV output files for every study.
-%In particular, all markers are ranked based on $\chi^2_1$ statistics of $\frac{Effect}{SE}$.
-%Then, the skewness and kurtosis of effects are calculated for 100\%, 99\%, 95\%, 75\% and 50\% of the worst markers.
-%Finally, the results are reported in the CSV report in the columns \emph{STD\_EFFECT\_1}, \emph{STD\_EFFECT\_0.99}, \emph{STD\_EFFECT\_0.95}, \emph{STD\_EFFECT\_0.75} and \emph{STD\_EFFECT\_0.5}, respectively.
-
-%To facilitate the usage of the QC results and enable further comparison of skewness and kurtosis of standardized effects between studies, the \emph{GWAtoolbox} provides an auxiliary funcion \emph{kusk\_check()}.
-%For a given list of studies after QC it automatically extracts the skewness and kurtosis values from the generated CSV reports to the \emph{R} data frame.
-%Later, an analyst may use the data frame to create customized comparison reports and plots.
-%The default skewness and kurtosis comparison report, produced with \emph{kusk\_check()} function, constists of plots depicted on Figure \ref{fig:kusk}.
-%\begin{figure}[!ht]
-%\centering
-%\includegraphics[type=jpg, ext=.jpg, read=.jpg, width=0.7\linewidth]{kusk_plot}
-%\caption{The skewness and kurtosis plot.}
-%\label{fig:kusk}
-%\end{figure}
 
 \begin{thebibliography}{9}
 

@@ -58,7 +58,7 @@
 	
 	Let's assume to have three input files: \file{input_file_1.txt}, \file{input_file_2.csv} and \file{input_file_3.txt}.
 	The files have column \emph{marker}, which should be renamed.
-	The new column name should be \emph{SNPID} for \file{input_file_1.txt}, and \emph{rsId} for \file{input_file_2.csv} and \file{input_file_2.txt}.
+	The new column name should be \emph{SNPID} for \file{input_file_1.txt}, and \emph{rsId} for \file{input_file_2.csv} and \file{input_file_3.txt}.
 	The correct column renaming is as follows:
 	\tabular{l}{
 		RENAME   marker SNPID\cr
