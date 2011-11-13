@@ -112,7 +112,6 @@ Histogram* Histogram::create(const char* name, double* sorted_data, int data_siz
 	histogram = new Histogram();
 
 	if ((histogram->breaks = (double*)malloc((nclass + 1) * sizeof(double))) == NULL) {
-		cout << "ad" << endl;
 		throw PlotException("Histogram", "Histogram* create( ... )", __LINE__, 2, (nclass + 1) * sizeof(double));
 	}
 

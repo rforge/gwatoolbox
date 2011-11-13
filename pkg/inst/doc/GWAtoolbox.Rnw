@@ -963,6 +963,7 @@ PROCESS  input_file.txt
 The new column names are specified in the input script with the command \textbf{RENAME}\index{RENAME}.
 The command is followed by two words: the first one corresponds to the column name in the original GWAS file, and the second one corresponds to the new column name in the resulting formatted GWAS file.
 The column names must not contain tabulation or whitespace characters.
+If column was renamed, then only the new column name must be used in the rest of the input script commands.
 
 \begin{example}
 Let's assume to have three input files: \emph{input\_file\_1.txt}, \emph{input\_file\_2.csv} and \emph{input\_file\_3.txt}.
@@ -1005,9 +1006,6 @@ Each file contains the following columns in the order as they are listed: \emph{
 Below are provided commands to rename the column \emph{marker} to \emph{SNPID} and to switch the ordering mode for every input file:
 \begin{verbatim}
 RENAME   marker SNPID
-MARKER   SNPID
-CHR      chromosome
-POSITION bp
 ORDER    ON chromosome bp SNPID
 PROCESS  input_file_1.txt
 ORDER    OFF
@@ -1057,32 +1055,45 @@ PROCESS  input_file_1.txt
 \end{example}
 
 \subsubsection{Inflation Factor and Genomic Control}
-By default the \emph{gwasformat()} doesn't calculate the inflation factor and doesn't apply the genomic control.
-This behaviour can be modified for every input file in the input script using the command \textbf{GC}\index{GC}/\textbf{GENOMICCONTROL}\index{GENOMICCONTROL} as specified below:
+By default, \emph{gwasformat()} doesn't calculate the inflation factor and doesn't apply genomic control of P-values and standard errors.
+This behaviour can be modified for every input file in the input script using the command \textbf{GC}\index{GC}/\textbf{GENOMICCONTROL}\index{GENOMICCONTROL}.
+Table \ref{table:gc_cmd} lists all possible arguments.
 \begin{table}[!ht]
 \begin{center}
-\begin{tabular}{|l|p{8cm}|}
+\begin{tabular}{|l|p{9cm}|}
 \hline
 Argument & Description \\
 \hline
-OFF & The inflation factor is not calculated and genomic control is not applied (default). \\
-ON & The inflation factor is calculated. Values in \emph{PVALUE} and \emph{STDERR} columns are corrected and saved to the new columns \emph{PVALUE\_gc} and \emph{STDERR\_gc}, accordingly. Has no effect if \emph{PVALUE} column is not present. \\
-numeric value & The inflation factor is assumed to be equal to the specified \emph{numeric value}. Values in \emph{PVALUE} and \emph{STDERR} columns are corrected and saved to the new columns \emph{PVALUE\_gc} and \emph{STDERR\_gc}, accordingly. \\
+OFF & The inflation factor is not calculated and genomic control is not applied (default) \\
+ON & The inflation factor is calculated. Genomic control of \emph{PVALUE}\index{PVALUE} and \emph{STDERR}\index{STDERR} columns is applied, corrected value are saved to the new columns \emph{PVALUE\_gc}\index{PVALUE\_gc} and \emph{STDERR\_gc}\index{STDERR\_gc}, accordingly. Has no effect if \emph{PVALUE}\index{PVALUE} column is not present. \\
+numeric value & The inflation factor is assumed to be equal to the specified \emph{numeric value}. Values in \emph{PVALUE}\index{PVALUE} and \emph{STDERR}\index{STDERR} columns are corrected and saved to the new columns \emph{PVALUE\_gc}\index{PVALUE\_gc}  and \emph{STDERR\_gc}\index{STDERR\_gc}, accordingly. \\
 \hline
 \end{tabular}
 \caption{The list of arguments for the GC/GENOMICCONTROL command.}
 \label{table:gc_cmd}
 \end{center}
 \end{table}
-If the inflation factor value is less than 1.0, then the genomic control is not applied.
+The inflation factor is calculated using only filtered SNPs.
+If calculated or explicitely specified inflation factor is less than $1.0$, then genomic control of P-values and standard errors is not applied, new columns \emph{PVALUE\_gc}\index{PVALUE\_gc} and \emph{STDERR\_gc}\index{STDERR\_gc} are filled with corresponding original values.
 
 \begin{example}
-Example
+\begin{verbatim}
+RENAME	pval pvalue
+RENAME	se   stderr
+PVALUE	pvalue
+STDERR	stderr
+GC      ON
+PROCESS input_file_1.txt
+GC      OFF
+PROCESS input_file_2.csv
+GC      1.1
+PROCESS input_file_3.txt
+\end{verbatim}
 \end{example}
 
 \subsubsection{Effective Sample Size}
-By default, the \emph{gwasformat()} computes the effective sample size based on \emph{IMP\_QUALITY} and \emph{N} columns.
-The computed values are saved to the new column \emph{N\_effective}.
+By default, the \emph{gwasformat()} computes the effective sample size based on \emph{IMP\_QUALITY}\index{IMP\_QUALITY} and \emph{N}\index{N} columns.
+The computed values are saved to the new column \emph{N\_effective}\index{N\_effective}.
 
 %In addition to the facilities for the data QC, \emph{GWAtoolbox} also includes facilities including routines for the data manipulation after the GWAS meta-analysis has been done and functions that facilitates result annotation.
 %These extensions are currently being debugged and will be made available soon.
