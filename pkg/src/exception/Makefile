@@ -21,8 +21,5 @@ include $(R_MAKECONF)
 
 gwalib:	Exception.o
 
-Exception.o:	Exception.cpp
-			$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -o $@ -c $<
-
 clean:  
 	@-rm -f *.o

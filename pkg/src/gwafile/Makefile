@@ -21,11 +21,5 @@ include $(R_MAKECONF)
 
 gwalib:	GwaFile.o GwaFileException.o
 
-GwaFile.o:	GwaFile.cpp
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -o $@ -c $<
-
-GwaFileException.o:	GwaFileException.cpp
-			$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -o $@ -c $<
-
 clean:  
 	@-rm -f *.o

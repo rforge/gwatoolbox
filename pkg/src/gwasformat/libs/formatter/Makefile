@@ -21,11 +21,5 @@ include $(R_MAKECONF)
 
 gwalib:	Formatter.o FormatterException.o
 
-Formatter.o:	Formatter.cpp
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -o $@ -c $<
-
-FormatterException.o:	FormatterException.cpp
-			$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -o $@ -c $<
-
 clean:  
 	@-rm -f *.o

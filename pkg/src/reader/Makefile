@@ -21,14 +21,5 @@ include $(R_MAKECONF)
 
 gwalib:	Reader.o TextReader.o ReaderException.o
 
-Reader.o:	Reader.cpp
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -o $@ -c $<
-	
-TextReader.o:	TextReader.cpp
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -o $@ -c $<
-
-ReaderException.o:	ReaderException.cpp
-			$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -o $@ -c $<
-
 clean:  
 	@-rm -f *.o

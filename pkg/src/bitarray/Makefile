@@ -21,11 +21,5 @@ include $(R_MAKECONF)
 
 gwalib:	BitArray.o BitArrayException.o
 
-BitArray.o:	BitArray.cpp
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -o $@ -c $<
-	
-BitArrayException.o:	BitArrayException.cpp
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -o $@ -c $<
-
 clean:  
 	@-rm -f *.o

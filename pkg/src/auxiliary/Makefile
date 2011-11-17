@@ -21,8 +21,5 @@ include $(R_MAKECONF)
 
 gwalib:	auxiliary.o
 
-auxiliary.o:	auxiliary.cpp
-		$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -o $@ -c $<
-
 clean:  
 	@-rm -f *.o

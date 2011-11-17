@@ -21,11 +21,5 @@ include $(R_MAKECONF)
 
 gwalib:	Descriptor.o DescriptorException.o
 
-Descriptor.o:	Descriptor.cpp
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -o $@ -c $<
-
-DescriptorException.o:	DescriptorException.cpp
-			$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -o $@ -c $<
-
 clean:  
 	@-rm -f *.o

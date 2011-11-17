@@ -19,34 +19,38 @@
 
 PKG_LIBS = $(GWALIBS)
 
+PKG_CFLAGS =
+PKG_CPPFLAGS = 
+PKG_CXXFLAGS =
+
 R_MAKECONF = $(R_HOME)/etc${R_ARCH}/Makeconf   
 
 GWADIRS = 	auxiliary \
-			bitarray \
 			exception \
-			descriptor \
+			bitarray \
 			reader \
+			descriptor \
 			gwafile \
 			gwasformat/libs/columns \
 			gwasformat/libs/formatter \
-			gwasqc/libs/analyzer \
 			gwasqc/libs/expressions \
 			gwasqc/libs/metas \
 			gwasqc/libs/plots \
+			gwasqc/libs/analyzer
 
 GWALIBS = 	auxiliary/*.o \
-			bitarray/*.o \
 			exception/*.o \
-			descriptor/*.o \
+			bitarray/*.o \
 			reader/*.o \
+			descriptor/*.o \
 			gwafile/*.o \
 			gwasformat/libs/columns/*.o \
 			gwasformat/libs/formatter/*.o \
-			gwasqc/libs/analyzer/*.o \
 			gwasqc/libs/expressions/*.o \
 			gwasqc/libs/metas/*.o \
-			gwasqc/libs/plots/*.o
-
+			gwasqc/libs/plots/*.o \
+			gwasqc/libs/analyzer/*.o
+			
 .PHONY: all gwalibs
      
 all: $(SHLIB)
@@ -54,7 +58,7 @@ $(SHLIB): gwalibs
 
 gwalibs:	subclean
 			@for gwadir in $(GWADIRS); do \
-				(cd $${gwadir} &&  PKG_CXXFLAGS="$(PKG_CXXFLAGS)"  R_MAKECONF="$(R_MAKECONF)" $(MAKE) gwalib) || exit 1; \
+				(cd $${gwadir} && PKG_CFLAGS="$(PKG_CFLAGS)" PKG_CPPFLAGS="$(PKG_CPPFLAGS)" PKG_CXXFLAGS="$(PKG_CXXFLAGS)" R_MAKECONF="$(R_MAKECONF)" $(MAKE) gwalib) || exit 1; \
 			done
 			
 subclean:

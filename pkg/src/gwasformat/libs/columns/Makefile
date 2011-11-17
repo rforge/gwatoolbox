@@ -21,20 +21,5 @@ include $(R_MAKECONF)
 
 gwalib:	Column.o CorrectedPvalueColumn.o CorrectedStandardErrorColumn.o EffectiveSampleSizeColumn.o ColumnException.o
 
-Column.o:	Column.cpp
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -o $@ -c $<
-	
-CorrectedPvalueColumn.o:	CorrectedPvalueColumn.cpp
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -o $@ -c $<
-
-CorrectedStandardErrorColumn.o:	CorrectedStandardErrorColumn.cpp
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -o $@ -c $<
-
-EffectiveSampleSizeColumn.o:	EffectiveSampleSizeColumn.cpp
-	$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -o $@ -c $<
-
-ColumnException.o:	ColumnException.cpp
-			$(CXX) $(ALL_CPPFLAGS) $(ALL_CXXFLAGS) -o $@ -c $<
-
 clean:  
 	@-rm -f *.o
