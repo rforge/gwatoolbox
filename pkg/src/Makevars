@@ -23,7 +23,23 @@ PKG_CFLAGS =
 PKG_CPPFLAGS = 
 PKG_CXXFLAGS =
 
-R_MAKECONF = $(R_HOME)/etc${R_ARCH}/Makeconf   
+R_MAKECONF = $(R_HOME)/etc${R_ARCH}/Makeconf
+
+ifneq ($(strip $(wildcard ${HOME}/.R/Makevars-${R_PLATFORM})),)
+	R_MAKECONF += ${HOME}/.R/Makevars-${R_PLATFORM}
+else
+ifneq ($(strip $(wildcard ${HOME}/.R/Makevars.win)),)
+	R_MAKECONF += ${HOME}/.R/Makevars.win
+else
+ifneq ($(strip $(wildcard ${HOME}/.R/Makevars.win64)),)
+	R_MAKECONF += ${HOME}/.R/Makevars.win64
+else
+ifneq ($(strip $(wildcard ${HOME}/.R/Makevars)),)
+	R_MAKECONF += ${HOME}/.R/Makevars 
+endif
+endif
+endif	
+endif
 
 GWADIRS = 	auxiliary \
 			exception \
