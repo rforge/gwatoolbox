@@ -119,6 +119,10 @@ bool TextReader::eof() {
 	return ifile_stream.eof();
 }
 
+bool TextReader::is_open() {
+	return ifile_stream.is_open();
+}
+
 bool TextReader::is_compressed() {
 	return false;
 }

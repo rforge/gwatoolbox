@@ -129,6 +129,15 @@ public:
 	static const char* VERBOSITY;
 	static const char* RENAME;
 
+	static const char* REGIONS_FILE;
+	static const char* REGIONS_FILE_SEPARATOR;
+	static const char* REGIONS_DEVIATION;
+	static const char* REGIONS_APPEND;
+	static const char* REGION_NAME;
+	static const char* REGION_CHR;
+	static const char* REGION_START;
+	static const char* REGION_END;
+
 	static const char* COMMA;
 	static const char* COMMAS;
 	static const char* SEMICOLON;

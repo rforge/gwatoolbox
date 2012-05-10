@@ -50,6 +50,7 @@ public:
 	int read_line() throw (ReaderException);
 	void reset() throw (ReaderException);
 	bool eof();
+	bool is_open();
 	bool is_compressed();
 	unsigned long int estimate_lines_count() throw (ReaderException);
 	void detect_field_separators(char* header_separator, char* data_separator) throw (ReaderException);

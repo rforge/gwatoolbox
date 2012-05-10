@@ -1,4 +1,5 @@
 useDynLib(GWAtoolbox)
+export(annotate)
 export(gwasqc)
 export(pgwasqc)
 export(dispersion_check)
