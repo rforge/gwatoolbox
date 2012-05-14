@@ -19,7 +19,7 @@
 
 #include "include/AnnotatorException.h"
 
-const int AnnotatorException::MESSAGE_TEMPLATES_NUMBER = 20;
+const int AnnotatorException::MESSAGE_TEMPLATES_NUMBER = 22;
 const char* AnnotatorException::MESSAGE_TEMPLATES[] = {
 /*00*/	"The '%s' argument has NULL value.",
 /*01*/	"The '%s' argument has an invalid value.",
@@ -40,7 +40,9 @@ const char* AnnotatorException::MESSAGE_TEMPLATES[] = {
 /*16*/	"Error while initializing an output file name.",
 /*17*/	"Error while opening '%s' output file.",
 /*18*/	"Error while closing '%s' output file.",
-/*19*/	"Error while writing '%s' output file."
+/*19*/	"Error while writing '%s' output file.",
+/*20*/	"Error while indexing map.",
+/*21*/	"Error while annotating."
 };
 
 AnnotatorException::AnnotatorException() : Exception() {

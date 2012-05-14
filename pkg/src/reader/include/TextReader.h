@@ -52,6 +52,7 @@ public:
 	bool eof();
 	bool is_open();
 	bool is_compressed();
+	int get_buffer_size();
 	unsigned long int estimate_lines_count() throw (ReaderException);
 	void detect_field_separators(char* header_separator, char* data_separator) throw (ReaderException);
 };

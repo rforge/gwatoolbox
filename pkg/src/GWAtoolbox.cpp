@@ -1231,14 +1231,15 @@ SEXP perform_annotation(SEXP external_descriptor_pointer) {
 	Descriptor* descriptor = NULL;
 	GwaFile* gwa_file = NULL;
 
-	void (GwaFile::*check_functions[7])(Descriptor*) = {
+	void (GwaFile::*check_functions[8])(Descriptor*) = {
 			&GwaFile::check_prefix,
 			&GwaFile::check_casesensitivity,
 			&GwaFile::check_separators,
 			&GwaFile::check_regions_file,
 			&GwaFile::check_regions_file_separators,
 			&GwaFile::check_regions_deviation,
-			&GwaFile::check_regions_append
+			&GwaFile::check_regions_append,
+			&GwaFile::check_map_file_separators
 	};
 
 	clock_t start_time = 0;
@@ -1257,11 +1258,14 @@ SEXP perform_annotation(SEXP external_descriptor_pointer) {
 	try {
 		Annotator annotator;
 
-		gwa_file = new GwaFile(descriptor, check_functions, 7);
+		gwa_file = new GwaFile(descriptor, check_functions, 8);
 
 		annotator.open_gwafile(gwa_file);
 		annotator.process_header();
 
+		if (annotator.is_map_present()) {
+			annotator.index_map();
+		}
 		annotator.index_regions();
 
 		annotator.annotate();

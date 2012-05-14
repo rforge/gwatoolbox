@@ -138,6 +138,12 @@ public:
 	static const char* REGION_START;
 	static const char* REGION_END;
 
+	static const char* MAP_FILE;
+	static const char* MAP_FILE_SEPARATOR;
+	static const char* MAP_MARKER;
+	static const char* MAP_CHR;
+	static const char* MAP_POSITION;
+
 	static const char* COMMA;
 	static const char* COMMAS;
 	static const char* SEMICOLON;

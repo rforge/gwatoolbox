@@ -127,6 +127,10 @@ bool TextReader::is_compressed() {
 	return false;
 }
 
+int TextReader::get_buffer_size() {
+	return buffer_size;
+}
+
 unsigned long int TextReader::estimate_lines_count() throw (ReaderException) {
 	long int file_length = 0;
 	int header_length = 0;

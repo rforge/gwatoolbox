@@ -97,6 +97,14 @@ bool GwaFile::is_regions_append_on() {
 	return regions_append_on;
 }
 
+char GwaFile::get_map_file_header_separartor() {
+	return map_file_header_separator;
+}
+
+char GwaFile::get_map_file_data_separator() {
+	return map_file_data_separator;
+}
+
 void GwaFile::check_filters(Descriptor* descriptor) throw (GwaFileException) {
 	vector<double>* filters = NULL;
 	double swap_value = 0.0;
@@ -441,11 +449,11 @@ void GwaFile::check_regions_file_separators(Descriptor* descriptor) throw (GwaFi
 		throw GwaFileException("GwaFile", "check_regions_file_separators( Descriptor* )", __LINE__, 0, "descriptor");
 	}
 
-	if ((genes_file = descriptor->get_property(Descriptor::REGIONS_FILE)) == NULL) {
-		throw GwaFileException("GwaFile", "check_regions_file_separators( Descriptor* )", __LINE__, 12, Descriptor::REGIONS_FILE, descriptor->get_full_path());
-	}
-
 	try {
+		if ((genes_file = descriptor->get_property(Descriptor::REGIONS_FILE)) == NULL) {
+			throw GwaFileException("GwaFile", "check_regions_file_separators( Descriptor* )", __LINE__, 12, Descriptor::REGIONS_FILE, descriptor->get_full_path());
+		}
+
 		if ((separator_name = descriptor->get_property(Descriptor::REGIONS_FILE_SEPARATOR)) == NULL) {
 			TextReader reader;
 			reader.set_file_name(genes_file);
@@ -510,6 +518,44 @@ void GwaFile::check_regions_append(Descriptor* descriptor) throw (GwaFileExcepti
 	} catch (DescriptorException &e) {
 		GwaFileException new_e(e);
 		new_e.add_message("GwaFile", "check_regions_append( Descriptor* )", __LINE__, 10, descriptor->get_full_path());
+		throw new_e;
+	}
+}
+
+void GwaFile::check_map_file_separators(Descriptor* descriptor) throw (GwaFileException) {
+	const char* map_file = NULL;
+	const char* separator_name = NULL;
+
+	if (descriptor == NULL) {
+		throw GwaFileException("GwaFile", "check_map_file_separators( Descriptor* )", __LINE__, 0, "descriptor");
+	}
+
+	try {
+		if ((map_file = descriptor->get_property(Descriptor::MAP_FILE)) != NULL) {
+			if ((separator_name = descriptor->get_property(Descriptor::MAP_FILE_SEPARATOR)) == NULL) {
+				TextReader reader;
+				reader.set_file_name(map_file);
+				reader.detect_field_separators(&map_file_header_separator, &map_file_data_separator);
+				reader.close();
+			} else if ((strcmp_ignore_case(separator_name, Descriptor::COMMA) == 0) ||
+					(strcmp_ignore_case(separator_name, Descriptor::COMMAS) == 0)) {
+				map_file_header_separator = ',';
+				map_file_data_separator = ',';
+			} else if (strcmp_ignore_case(separator_name, Descriptor::SEMICOLON) == 0) {
+				map_file_header_separator = ';';
+				map_file_data_separator = ';';
+			} else if ((strcmp_ignore_case(separator_name, Descriptor::TAB) == 0) ||
+					(strcmp_ignore_case(separator_name, Descriptor::TABULATION) == 0)) {
+				map_file_header_separator = '\t';
+				map_file_data_separator = '\t';
+			} else if (strcmp_ignore_case(separator_name, Descriptor::WHITESPACE) == 0) {
+				map_file_header_separator = ' ';
+				map_file_data_separator = ' ';
+			}
+		}
+	} catch (Exception &e) {
+		GwaFileException new_e(e);
+		new_e.add_message("GwaFile", "check_map_file_separators( Descriptor* )", __LINE__, 10, descriptor->get_full_path());
 		throw new_e;
 	}
 }

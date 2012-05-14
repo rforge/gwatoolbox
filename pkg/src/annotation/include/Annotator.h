@@ -33,9 +33,11 @@ class Annotator {
 private:
 	GwaFile* gwafile;
 	const char* regions_file;
+	const char* map_file;
 
 	TextReader reader;
 	TextReader regions_reader;
+	TextReader map_reader;
 
 	char* header_backup;
 
@@ -50,13 +52,50 @@ private:
 	int region_start_column_pos;
 	int region_end_column_pos;
 
+	bool has_map;
+
+	int map_file_total_columns;
+	int map_marker_column_pos;
+	int map_chr_column_pos;
+	int map_position_column_pos;
+
 	map<char*, IntervalTree<char*>*, bool(*)(const char*, const char*)> regions_indices;
 	map<char*, IntervalTree<char*>*, bool(*)(const char*, const char*)>::iterator regions_indices_it;
+
+	struct marker_coords {
+		char* chr;
+		int position;
+
+		bool operator()(const marker_coords* first, const marker_coords* second) const {
+			int result = 0;
+
+			if ((result = auxiliary::strcmp_ignore_case(first->chr, second->chr)) == 0) {
+				return (first->position < second->position);
+			}
+
+			return (result < 0);
+		}
+	};
+
+	map<char*, set<marker_coords*, marker_coords>*, bool(*)(const char*, const char*)> map_index;
+	map<char*, set<marker_coords*, marker_coords>*, bool(*)(const char*, const char*)>::iterator map_index_it;
+	set<marker_coords*, marker_coords>* map_coords;
+	set<marker_coords*, marker_coords>::iterator map_coords_it;
+
+	void process_header_with_map() throw (AnnotatorException);
+	void process_header_without_map() throw (AnnotatorException);
+	void annotate_with_map() throw (AnnotatorException);
+	void annotate_without_map() throw (AnnotatorException);
 
 	void open_regions_file() throw (AnnotatorException);
 	void close_regions_file() throw (AnnotatorException);
 	void process_regions_file_header() throw (AnnotatorException);
 	void process_regions_file_data() throw (AnnotatorException);
+
+	void open_map_file() throw (AnnotatorException);
+	void close_map_file() throw (AnnotatorException);
+	void process_map_file_header() throw (AnnotatorException);
+	void process_map_file_data() throw (AnnotatorException);
 
 	void write_char_vector(ofstream &ofile_stream, vector<char*>* values, char separator) throw (ofstream::failure);
 
@@ -67,8 +106,11 @@ public:
 	void open_gwafile(GwaFile* gwafile) throw (AnnotatorException);
 	void close_gwafile() throw (AnnotatorException);
 
+	bool is_map_present();
+
 	void process_header() throw (AnnotatorException);
 	void index_regions() throw (AnnotatorException);
+	void index_map() throw (AnnotatorException);
 	void annotate() throw (AnnotatorException);
 };
 

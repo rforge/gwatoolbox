@@ -19,7 +19,7 @@
 
 #include "include/Annotator.h"
 
-Annotator::Annotator() : gwafile(NULL), regions_file(NULL),
+Annotator::Annotator() : gwafile(NULL), regions_file(NULL), map_file(NULL),
 	header_backup(NULL),
 	total_columns(numeric_limits<int>::min()),
 	marker_column_pos(numeric_limits<int>::min()),
@@ -30,7 +30,13 @@ Annotator::Annotator() : gwafile(NULL), regions_file(NULL),
 	region_chr_column_pos(numeric_limits<int>::min()),
 	region_start_column_pos(numeric_limits<int>::min()),
 	region_end_column_pos(numeric_limits<int>::min()),
-	regions_indices(auxiliary::bool_strcmp) {
+	has_map(false),
+	map_marker_column_pos(numeric_limits<int>::min()),
+	map_chr_column_pos(numeric_limits<int>::min()),
+	map_position_column_pos(numeric_limits<int>::min()),
+	regions_indices(auxiliary::bool_strcmp),
+	map_index(auxiliary::bool_strcmp),
+	map_coords(NULL) {
 
 }
 
@@ -43,6 +49,24 @@ Annotator::~Annotator() {
 	}
 	regions_indices.clear();
 
+	map_index_it = map_index.begin();
+	while (map_index_it != map_index.end()) {
+		free(map_index_it->first);
+
+		map_coords = map_index_it->second;
+		map_coords_it = map_coords->begin();
+		while (map_coords_it != map_coords->end()) {
+			free((*map_coords_it)->chr);
+			delete *map_coords_it;
+			map_coords_it++;
+		}
+		map_coords->clear();
+		delete map_coords;
+
+		map_index_it++;
+	}
+	map_index.clear();
+
 	if (header_backup != NULL) {
 		free(header_backup);
 		header_backup = NULL;
@@ -50,6 +74,7 @@ Annotator::~Annotator() {
 
 	gwafile = NULL;
 	regions_file = NULL;
+	map_file = NULL;
 }
 
 void Annotator::open_gwafile(GwaFile* gwafile) throw (AnnotatorException) {
@@ -59,9 +84,20 @@ void Annotator::open_gwafile(GwaFile* gwafile) throw (AnnotatorException) {
 
 	try {
 		close_gwafile();
+
+		if (gwafile->get_descriptor()->get_property(Descriptor::MAP_FILE) != NULL) {
+			has_map = true;
+		} else {
+			has_map = false;
+		}
+
 		this->gwafile = gwafile;
 		reader.set_file_name(gwafile->get_descriptor()->get_full_path());
 		reader.open();
+	} catch (DescriptorException& e) {
+		AnnotatorException new_e(e);
+		new_e.add_message("Annotator", "open_gwafile( GwaFile* )", __LINE__, 3, gwafile->get_descriptor()->get_full_path());
+		throw new_e;
 	} catch (ReaderException& e) {
 		AnnotatorException new_e(e);
 		new_e.add_message("Annotator", "open_gwafile( GwaFile* )", __LINE__, 3, gwafile->get_descriptor()->get_full_path());
@@ -89,15 +125,34 @@ void Annotator::close_gwafile() throw (AnnotatorException) {
 	}
 	regions_indices.clear();
 
+	map_index_it = map_index.begin();
+	while (map_index_it != map_index.end()) {
+		free(map_index_it->first);
+
+		map_coords = map_index_it->second;
+		map_coords_it = map_coords->begin();
+		while (map_coords_it != map_coords->end()) {
+			free((*map_coords_it)->chr);
+			delete *map_coords_it;
+			map_coords_it++;
+		}
+		map_coords->clear();
+		delete map_coords;
+
+		map_index_it++;
+	}
+	map_index.clear();
+
 	if (header_backup != NULL) {
 		free(header_backup);
 		header_backup = NULL;
 	}
 
 	gwafile = NULL;
+	has_map = false;
 }
 
-void Annotator::process_header() throw (AnnotatorException) {
+void Annotator::process_header_without_map() throw (AnnotatorException) {
 	Descriptor* descriptor = NULL;
 	char header_separator = '\0';
 	char* header = NULL;
@@ -116,7 +171,7 @@ void Annotator::process_header() throw (AnnotatorException) {
 		regions_append = gwafile->is_regions_append_on();
 
 		if (reader.read_line() <= 0) {
-			throw AnnotatorException("Annotator", "process_header()", __LINE__, 5, 1, gwafile->get_descriptor()->get_name());
+			throw AnnotatorException("Annotator", "process_header_without_map()", __LINE__, 5, 1, gwafile->get_descriptor()->get_name());
 		}
 
 		header = *reader.line;
@@ -124,11 +179,10 @@ void Annotator::process_header() throw (AnnotatorException) {
 		if (regions_append) {
 			header_backup = (char*)malloc((strlen(header) + 1u) * sizeof(char));
 			if (header_backup == NULL) {
-				throw AnnotatorException("Annotator", "process_header", __LINE__, 2, ((strlen(header) + 1u) * sizeof(char)));
+				throw AnnotatorException("Annotator", "process_header_without_map()", __LINE__, 2, ((strlen(header) + 1u) * sizeof(char)));
 			}
 			strcpy(header_backup, header);
 		}
-
 
 		total_columns = numeric_limits<int>::min();
 		marker_column_pos = numeric_limits<int>::min();
@@ -154,24 +208,99 @@ void Annotator::process_header() throw (AnnotatorException) {
 		total_columns = column_position;
 
 		if (marker_column_pos < 0) {
-			throw AnnotatorException("Annotator", "process_header()", __LINE__, 7, ((column_name = descriptor->get_column(Descriptor::MARKER)) != NULL) ? column_name : Descriptor::MARKER, gwafile->get_descriptor()->get_name());
+			throw AnnotatorException("Annotator", "process_header_without_map()", __LINE__, 7, ((column_name = descriptor->get_column(Descriptor::MARKER)) != NULL) ? column_name : Descriptor::MARKER, gwafile->get_descriptor()->get_name());
 		}
 
 		if (chr_column_pos < 0) {
-			throw AnnotatorException("Annotator", "process_header()", __LINE__, 7, ((column_name = descriptor->get_column(Descriptor::CHR)) != NULL) ? column_name : Descriptor::CHR, gwafile->get_descriptor()->get_name());
+			throw AnnotatorException("Annotator", "process_header_without_map()", __LINE__, 7, ((column_name = descriptor->get_column(Descriptor::CHR)) != NULL) ? column_name : Descriptor::CHR, gwafile->get_descriptor()->get_name());
 		}
 
 		if (position_column_pos < 0) {
-			throw AnnotatorException("Annotator", "process_header()", __LINE__, 7, ((column_name = descriptor->get_column(Descriptor::POSITION)) != NULL) ? column_name : Descriptor::POSITION, gwafile->get_descriptor()->get_name());
+			throw AnnotatorException("Annotator", "process_header_without_map()", __LINE__, 7, ((column_name = descriptor->get_column(Descriptor::POSITION)) != NULL) ? column_name : Descriptor::POSITION, gwafile->get_descriptor()->get_name());
 		}
 	} catch (ReaderException &e) {
 		AnnotatorException new_e(e);
-		new_e.add_message("Annotator", "process_header()", __LINE__, 6, gwafile->get_descriptor()->get_name());
+		new_e.add_message("Annotator", "process_header_without_map()", __LINE__, 6, gwafile->get_descriptor()->get_name());
 		throw new_e;
 	} catch (DescriptorException &e) {
 		AnnotatorException new_e(e);
-		new_e.add_message("Annotator", "process_header()", __LINE__, 6, gwafile->get_descriptor()->get_name());
+		new_e.add_message("Annotator", "process_header_without_map()", __LINE__, 6, gwafile->get_descriptor()->get_name());
 		throw new_e;
+	}
+}
+
+void Annotator::process_header_with_map() throw (AnnotatorException) {
+	Descriptor* descriptor = NULL;
+	char header_separator = '\0';
+	char* header = NULL;
+	char* token = NULL;
+	int column_position = 0;
+	const char* column_name = NULL;
+	bool regions_append = false;
+
+	if (gwafile == NULL) {
+		return;
+	}
+
+	try {
+		descriptor = gwafile->get_descriptor();
+		header_separator = gwafile->get_header_separator();
+		regions_append = gwafile->is_regions_append_on();
+
+		if (reader.read_line() <= 0) {
+			throw AnnotatorException("Annotator", "process_header_with_map()", __LINE__, 5, 1, gwafile->get_descriptor()->get_name());
+		}
+
+		header = *reader.line;
+
+		if (regions_append) {
+			header_backup = (char*)malloc((strlen(header) + 1u) * sizeof(char));
+			if (header_backup == NULL) {
+				throw AnnotatorException("Annotator", "process_header_with_map()", __LINE__, 2, ((strlen(header) + 1u) * sizeof(char)));
+			}
+			strcpy(header_backup, header);
+		}
+
+		total_columns = numeric_limits<int>::min();
+		marker_column_pos = numeric_limits<int>::min();
+
+		token = auxiliary::strtok(&header, header_separator);
+		while (token != NULL) {
+			column_name = descriptor->get_default_column(token, gwafile->is_case_sensitive());
+			if (column_name != NULL) {
+				if (strcmp(column_name, Descriptor::MARKER) == 0) {
+					marker_column_pos = column_position;
+				}
+			}
+			token = auxiliary::strtok(&header, header_separator);
+			++column_position;
+		}
+
+		total_columns = column_position;
+
+		if (marker_column_pos < 0) {
+			throw AnnotatorException("Annotator", "process_header_with_map()", __LINE__, 7, ((column_name = descriptor->get_column(Descriptor::MARKER)) != NULL) ? column_name : Descriptor::MARKER, gwafile->get_descriptor()->get_name());
+		}
+	} catch (ReaderException &e) {
+		AnnotatorException new_e(e);
+		new_e.add_message("Annotator", "process_header_with_map()", __LINE__, 6, gwafile->get_descriptor()->get_name());
+		throw new_e;
+	} catch (DescriptorException &e) {
+		AnnotatorException new_e(e);
+		new_e.add_message("Annotator", "process_header_with_map()", __LINE__, 6, gwafile->get_descriptor()->get_name());
+		throw new_e;
+	}
+}
+
+void Annotator::process_header() throw (AnnotatorException) {
+	if (gwafile == NULL) {
+		return;
+	}
+
+	if (has_map) {
+		process_header_with_map();
+	} else {
+		process_header_without_map();
 	}
 }
 
@@ -199,7 +328,41 @@ void Annotator::index_regions() throw (AnnotatorException) {
 	}
 }
 
-void Annotator::annotate() throw (AnnotatorException) {
+void Annotator::index_map() throw (AnnotatorException) {
+	if (gwafile == NULL) {
+		return;
+	}
+
+	map_index_it = map_index.begin();
+	while (map_index_it != map_index.end()) {
+		free(map_index_it->first);
+
+		map_coords = map_index_it->second;
+		map_coords_it = map_coords->begin();
+		while (map_coords_it != map_coords->end()) {
+			free((*map_coords_it)->chr);
+			delete *map_coords_it;
+			map_coords_it++;
+		}
+		map_coords->clear();
+		delete map_coords;
+
+		map_index_it++;
+	}
+	map_index.clear();
+
+	try {
+		open_map_file();
+		process_map_file_header();
+		process_map_file_data();
+		close_map_file();
+	} catch (AnnotatorException &e) {
+		e.add_message("Annotator", "index_map()", __LINE__, 20);
+		throw;
+	}
+}
+
+void Annotator::annotate_without_map() throw (AnnotatorException) {
 	Descriptor* descriptor = NULL;
 
 	ofstream ofile_stream;
@@ -254,7 +417,7 @@ void Annotator::annotate() throw (AnnotatorException) {
 
 		auxiliary::transform_file_name(&output_file_name, output_prefix, file_name, NULL, true);
 		if (output_file_name == NULL) {
-			throw AnnotatorException("Annotator", "annotate()", __LINE__, 16);
+			throw AnnotatorException("Annotator", "annotate_without_map()", __LINE__, 16);
 		}
 
 		if (data_separator == ',') {
@@ -268,7 +431,7 @@ void Annotator::annotate() throw (AnnotatorException) {
 		try {
 			ofile_stream.open(output_file_name);
 		} catch (ofstream::failure &e) {
-			throw AnnotatorException("Annotator", "annotate()", __LINE__, 17, output_file_name);
+			throw AnnotatorException("Annotator", "annotate_without_map()", __LINE__, 17, output_file_name);
 		}
 
 		try {
@@ -316,18 +479,18 @@ void Annotator::annotate() throw (AnnotatorException) {
 				}
 
 				if (column_position < total_columns) {
-					throw AnnotatorException("Annotator", "annotate()", __LINE__, 8, line_number, gwafile->get_descriptor()->get_name(), column_position, total_columns);
+					throw AnnotatorException("Annotator", "annotate_without_map()", __LINE__, 8, line_number, gwafile->get_descriptor()->get_name(), column_position, total_columns);
 				} else if (column_position > total_columns) {
-					throw AnnotatorException("Annotator", "annotate()", __LINE__, 9, line_number, gwafile->get_descriptor()->get_name(), column_position, total_columns);
+					throw AnnotatorException("Annotator", "annotate_without_map()", __LINE__, 9, line_number, gwafile->get_descriptor()->get_name(), column_position, total_columns);
 				}
 
 				position = (int)strtol(position_token, &end_ptr, 10);
 				if (*end_ptr != '\0') {
-					throw AnnotatorException("Annotator", "annotate()",  __LINE__, 10, position, ((column_name = descriptor->get_column(Descriptor::POSITION)) != NULL) ? column_name : Descriptor::POSITION, line_number);
+					throw AnnotatorException("Annotator", "annotate_without_map()",  __LINE__, 10, position, ((column_name = descriptor->get_column(Descriptor::POSITION)) != NULL) ? column_name : Descriptor::POSITION, line_number);
 				}
 
 				if (position < 0) {
-					throw AnnotatorException("Annotator", "annotate()",  __LINE__, 11, ((column_name = descriptor->get_column(Descriptor::POSITION)) != NULL) ? column_name : Descriptor::POSITION, position, line_number);
+					throw AnnotatorException("Annotator", "annotate_without_map()",  __LINE__, 11, ((column_name = descriptor->get_column(Descriptor::POSITION)) != NULL) ? column_name : Descriptor::POSITION, position, line_number);
 				}
 
 				if (!regions_append) {
@@ -352,13 +515,15 @@ void Annotator::annotate() throw (AnnotatorException) {
 							ofile_stream << data_separator;
 							annotated_genes_it = annotated_genes.find(((int)deviation->at(i)));
 							if (annotated_genes_it != annotated_genes.end()) {
-								write_char_vector(ofile_stream, annotated_genes_it->second, ',');
+								write_char_vector(ofile_stream, annotated_genes_it->second, region_separator);
+							} else {
+								ofile_stream << "NA";
 							}
 						}
 						ofile_stream << endl;
 					} else {
 						for (unsigned int i = 0u; i < deviation->size(); ++i) {
-							ofile_stream << data_separator;
+							ofile_stream << data_separator << "NA";
 						}
 						ofile_stream << endl;
 					}
@@ -373,7 +538,7 @@ void Annotator::annotate() throw (AnnotatorException) {
 					genes_index_subset.clear();
 				} else {
 					for (unsigned int i = 0u; i < deviation->size(); ++i) {
-						ofile_stream << data_separator;
+						ofile_stream << data_separator << "NA";
 					}
 					ofile_stream << endl;
 				}
@@ -381,29 +546,273 @@ void Annotator::annotate() throw (AnnotatorException) {
 				++line_number;
 			}
 		} catch (ofstream::failure &e) {
-			throw AnnotatorException("Annotator", "annotate()", __LINE__, 19, output_file_name);
+			throw AnnotatorException("Annotator", "annotate_without_map()", __LINE__, 19, output_file_name);
 		}
 
 		try {
 			ofile_stream.close();
 		} catch (ofstream::failure &e) {
-			throw AnnotatorException("Annotator", "annotate()", __LINE__, 18, output_file_name);
+			throw AnnotatorException("Annotator", "annotate_without_map()", __LINE__, 18, output_file_name);
 		}
 
 		if (line_length == 0) {
-			throw AnnotatorException("Annotator", "annotate()", __LINE__, 13, line_number, gwafile->get_descriptor()->get_name());
+			throw AnnotatorException("Annotator", "annotate_without_map()", __LINE__, 13, line_number, gwafile->get_descriptor()->get_name());
 		}
 	} catch (DescriptorException &e) {
 		AnnotatorException new_e(e);
-		new_e.add_message("Annotator", "annotate()", __LINE__, 14, gwafile->get_descriptor()->get_name());
+		new_e.add_message("Annotator", "annotate_without_map()", __LINE__, 14, gwafile->get_descriptor()->get_name());
 		throw new_e;
 	} catch (ReaderException &e) {
 		AnnotatorException new_e(e);
-		new_e.add_message("Annotator", "annotate()", __LINE__, 14, gwafile->get_descriptor()->get_name());
+		new_e.add_message("Annotator", "annotate_without_map()", __LINE__, 14, gwafile->get_descriptor()->get_name());
 		throw new_e;
 	} catch (AnnotatorException &e) {
-		e.add_message("Annotator", "annotate()", __LINE__, 14, gwafile->get_descriptor()->get_name());
+		e.add_message("Annotator", "annotate_without_map()", __LINE__, 14, gwafile->get_descriptor()->get_name());
 		throw;
+	}
+}
+
+void Annotator::annotate_with_map() throw (AnnotatorException) {
+	Descriptor* descriptor = NULL;
+
+	ofstream ofile_stream;
+
+	const char* output_prefix = NULL;
+	const char* file_name = NULL;
+	char* output_file_name = NULL;
+
+	char* line = NULL;
+	int line_length = 0;
+	unsigned int line_number = 2u;
+	char* line_backup = NULL;
+
+	char header_separator = '\0';
+	char data_separator = '\0';
+	char region_separator = '\0';
+	bool regions_append = false;
+
+	char* token = NULL;
+	char* end_ptr = NULL;
+
+	int column_position = 0;
+
+	const char* column_name = NULL;
+
+	char* marker_token = NULL;
+	marker_coords* coords = NULL;
+
+	vector<double>* deviation = NULL;
+	int deviation_value = 0;
+
+	IntervalTree<char*>* genes_index = NULL;
+	IntervalTree<char*> genes_index_subset;
+
+	map<int, vector<char*>*> annotated_genes;
+	map<int, vector<char*>*>::iterator annotated_genes_it;
+
+	if (gwafile == NULL) {
+		return;
+	}
+
+	try {
+		descriptor = gwafile->get_descriptor();
+		output_prefix = descriptor->get_property(Descriptor::PREFIX);
+		file_name = descriptor->get_name();
+		header_separator = gwafile->get_header_separator();
+		data_separator = gwafile->get_data_separator();
+		deviation = descriptor->get_threshold(Descriptor::REGIONS_DEVIATION);
+		regions_append = gwafile->is_regions_append_on();
+
+		auxiliary::transform_file_name(&output_file_name, output_prefix, file_name, NULL, true);
+		if (output_file_name == NULL) {
+			throw AnnotatorException("Annotator", "annotate_with_map()", __LINE__, 16);
+		}
+
+		if (regions_append) {
+			line_backup = (char*)malloc(reader.get_buffer_size() * sizeof(char));
+			if (line_backup == NULL) {
+				throw AnnotatorException("Annotator", "annotate_with_map()", __LINE__, 2, (reader.get_buffer_size() * sizeof(char)));
+			}
+		}
+
+		if (data_separator == ',') {
+			region_separator = ';';
+		} else {
+			region_separator = ',';
+		}
+
+		ofile_stream.exceptions(ios_base::failbit | ios_base::badbit);
+
+		try {
+			ofile_stream.open(output_file_name);
+		} catch (ofstream::failure &e) {
+			throw AnnotatorException("Annotator", "annotate_with_map()", __LINE__, 17, output_file_name);
+		}
+
+		try {
+			if (regions_append) {
+				ofile_stream << header_backup;
+				ofile_stream << header_separator;
+				ofile_stream << ((column_name = descriptor->get_property(Descriptor::MAP_CHR)) != NULL ? column_name : Descriptor::MAP_CHR);
+				ofile_stream << header_separator;
+				ofile_stream << ((column_name = descriptor->get_property(Descriptor::MAP_POSITION)) != NULL ? column_name : Descriptor::MAP_POSITION);
+			} else {
+				ofile_stream << ((column_name = descriptor->get_column(Descriptor::MARKER)) != NULL ? column_name : Descriptor::MARKER);
+				ofile_stream << header_separator;
+				ofile_stream << ((column_name = descriptor->get_property(Descriptor::MAP_CHR)) != NULL ? column_name : Descriptor::MAP_CHR);
+				ofile_stream << header_separator;
+				ofile_stream << ((column_name = descriptor->get_property(Descriptor::MAP_POSITION)) != NULL ? column_name : Descriptor::MAP_POSITION);
+			}
+			for (unsigned int i = 0u; i < deviation->size(); ++i) {
+				deviation_value = (int)deviation->at(i);
+				if (deviation_value != 0) {
+					ofile_stream << header_separator << "+/-" << deviation_value;
+				} else {
+					ofile_stream << header_separator << "IN";
+				}
+			}
+			ofile_stream << endl;
+
+			while ((line_length = reader.read_line()) > 0) {
+				line = *reader.line;
+
+				if (regions_append) {
+					strcpy(line_backup, line);
+				}
+
+				column_position = 0;
+				marker_token = NULL;
+				token = auxiliary::strtok(&line, data_separator);
+				while (token != NULL) {
+					if (column_position == marker_column_pos) {
+						marker_token = token;
+					}
+					token = auxiliary::strtok(&line, data_separator);
+					++column_position;
+				}
+
+				if (column_position < total_columns) {
+					throw AnnotatorException("Annotator", "annotate_with_map()", __LINE__, 8, line_number, gwafile->get_descriptor()->get_name(), column_position, total_columns);
+				} else if (column_position > total_columns) {
+					throw AnnotatorException("Annotator", "annotate_with_map()", __LINE__, 9, line_number, gwafile->get_descriptor()->get_name(), column_position, total_columns);
+				}
+
+				map_index_it = map_index.find(marker_token);
+				if (map_index_it == map_index.end()) {
+					if (regions_append) {
+						ofile_stream << line_backup << data_separator << "NA" << data_separator << "NA";
+					} else {
+						ofile_stream << marker_token << data_separator << "NA" << data_separator << "NA";
+					}
+					for (unsigned int i = 0u; i < deviation->size(); ++i) {
+						ofile_stream << data_separator << "NA";
+					}
+					ofile_stream << endl;
+				} else {
+					map_coords = map_index_it->second;
+					map_coords_it = map_coords->begin();
+					while (map_coords_it != map_coords->end()) {
+						coords = *map_coords_it;
+
+						if (regions_append) {
+							ofile_stream << line_backup << data_separator << coords->chr << data_separator << coords->position;
+						} else {
+							ofile_stream << marker_token << data_separator << coords->chr << data_separator << coords->position;
+						}
+
+						regions_indices_it = regions_indices.find(coords->chr);
+						if (regions_indices_it != regions_indices.end()) {
+							genes_index = regions_indices_it->second;
+
+							deviation_value = (int)deviation->back();
+							genes_index->get_intersecting_intervals(coords->position - deviation_value, coords->position + deviation_value, deviation_value, genes_index_subset);
+							for (int i = deviation->size() - 2; i >= 0; --i) {
+								deviation_value = (int)deviation->at(i);
+								genes_index_subset.mark_intersecting_intervals(coords->position - deviation_value, coords->position + deviation_value, deviation_value);
+							}
+
+							genes_index_subset.get_marked_values(annotated_genes);
+
+							if (annotated_genes.size() > 0) {
+								for (unsigned int i = 0u; i < deviation->size(); ++i) {
+									ofile_stream << data_separator;
+									annotated_genes_it = annotated_genes.find(((int)deviation->at(i)));
+									if (annotated_genes_it != annotated_genes.end()) {
+										write_char_vector(ofile_stream, annotated_genes_it->second, region_separator);
+									} else {
+										ofile_stream << "NA";
+									}
+								}
+								ofile_stream << endl;
+							} else {
+								for (unsigned int i = 0u; i < deviation->size(); ++i) {
+									ofile_stream << data_separator << "NA";
+								}
+								ofile_stream << endl;
+							}
+
+							annotated_genes_it = annotated_genes.begin();
+							while(annotated_genes_it != annotated_genes.end()) {
+								delete annotated_genes_it->second;
+								annotated_genes_it++;
+							}
+							annotated_genes.clear();
+
+							genes_index_subset.clear();
+						} else {
+							for (unsigned int i = 0u; i < deviation->size(); ++i) {
+								ofile_stream << data_separator << "NA";
+							}
+							ofile_stream << endl;
+						}
+
+						map_coords_it++;
+					}
+				}
+
+				++line_number;
+			}
+		} catch (ofstream::failure &e) {
+			throw AnnotatorException("Annotator", "annotate_with_map()", __LINE__, 19, output_file_name);
+		}
+
+		try {
+			ofile_stream.close();
+		} catch (ofstream::failure &e) {
+			throw AnnotatorException("Annotator", "annotate_with_map()", __LINE__, 18, output_file_name);
+		}
+
+		if (line_backup != NULL) {
+			free(line_backup);
+			line_backup = NULL;
+		}
+
+		if (line_length == 0) {
+			throw AnnotatorException("Annotator", "annotate_with_map()", __LINE__, 13, line_number, gwafile->get_descriptor()->get_name());
+		}
+	} catch (DescriptorException &e) {
+		AnnotatorException new_e(e);
+		new_e.add_message("Annotator", "annotate_with_map()", __LINE__, 14, gwafile->get_descriptor()->get_name());
+		throw new_e;
+	} catch (ReaderException &e) {
+		AnnotatorException new_e(e);
+		new_e.add_message("Annotator", "annotate_with_map()", __LINE__, 14, gwafile->get_descriptor()->get_name());
+		throw new_e;
+	} catch (AnnotatorException &e) {
+		e.add_message("Annotator", "annotate_with_map()", __LINE__, 14, gwafile->get_descriptor()->get_name());
+		throw;
+	}
+}
+
+void Annotator::annotate() throw (AnnotatorException) {
+	if (gwafile == NULL) {
+		return;
+	}
+
+	if (has_map) {
+		annotate_with_map();
+	} else {
+		annotate_without_map();
 	}
 }
 
@@ -681,6 +1090,264 @@ void Annotator::process_regions_file_data()  throw (AnnotatorException) {
 	}
 }
 
+void Annotator::open_map_file() throw (AnnotatorException) {
+	if (gwafile == NULL) {
+		return;
+	}
+
+	try {
+		close_map_file();
+
+		map_file = gwafile->get_descriptor()->get_property(Descriptor::MAP_FILE);
+		if (map_file == NULL) {
+			return;
+		}
+
+		map_reader.set_file_name(map_file);
+		map_reader.open();
+	} catch (ReaderException& e) {
+		AnnotatorException new_e(e);
+		new_e.add_message("Annotator", "open_map_file()", __LINE__, 3, (map_file != NULL) ? map_file : "NULL");
+		throw new_e;
+	}  catch (DescriptorException& e) {
+		AnnotatorException new_e(e);
+		new_e.add_message("Annotator", "open_map_file()", __LINE__, 3, (map_file != NULL) ? map_file : "NULL");
+		throw new_e;
+	} catch (AnnotatorException& e) {
+		e.add_message("Annotator", "open_map_file()", __LINE__, 3, (map_file != NULL) ? map_file : "NULL");
+		throw;
+	}
+}
+
+void Annotator::close_map_file() throw (AnnotatorException) {
+	try {
+		map_reader.close();
+	} catch (ReaderException &e) {
+		AnnotatorException new_e(e);
+		new_e.add_message("Annotator", "close_map_file()", __LINE__, 4, (map_file != NULL) ? map_file : "NULL");
+		throw new_e;
+	}
+
+	map_file = NULL;
+}
+
+void Annotator::process_map_file_header() throw (AnnotatorException) {
+	Descriptor* descriptor = NULL;
+	char header_separator = '\0';
+	char* header = NULL;
+	char* token = NULL;
+
+	int column_position = 0;
+
+	const char* map_marker_column = NULL;
+	const char* map_chr_column = NULL;
+	const char* map_position_column = NULL;
+
+	if  ((gwafile == NULL) || (map_file == NULL)) {
+		return;
+	}
+
+	try {
+		descriptor = gwafile->get_descriptor();
+		header_separator = gwafile->get_regions_file_header_separator();
+
+		if (map_reader.read_line() <= 0) {
+			throw AnnotatorException("Annotator", "process_map_file_header()", __LINE__, 5, 1, map_file);
+		}
+
+		header = *map_reader.line;
+
+		map_marker_column = descriptor->get_property(Descriptor::MAP_MARKER);
+		map_chr_column = descriptor->get_property(Descriptor::MAP_CHR);
+		map_position_column = descriptor->get_property(Descriptor::MAP_POSITION);
+
+		map_file_total_columns = numeric_limits<int>::min();
+		map_marker_column_pos = numeric_limits<int>::min();
+		map_chr_column_pos = numeric_limits<int>::min();
+		map_position_column_pos = numeric_limits<int>::min();
+
+		token = auxiliary::strtok(&header, header_separator);
+		if (gwafile->is_case_sensitive()) {
+			while (token != NULL) {
+				if (strcmp(token, map_marker_column) == 0) {
+					map_marker_column_pos = column_position;
+				} else if (strcmp(token, map_chr_column) == 0) {
+					map_chr_column_pos = column_position;
+				} else if (strcmp(token, map_position_column) == 0) {
+					map_position_column_pos = column_position;
+				}
+				token = auxiliary::strtok(&header, header_separator);
+				++column_position;
+			}
+		} else {
+			while (token != NULL) {
+				if (auxiliary::strcmp_ignore_case(token, map_marker_column) == 0) {
+					map_marker_column_pos = column_position;
+				} else if (auxiliary::strcmp_ignore_case(token, map_chr_column) == 0) {
+					map_chr_column_pos = column_position;
+				} else if (auxiliary::strcmp_ignore_case(token, map_position_column) == 0) {
+					map_position_column_pos = column_position;
+				}
+				token = auxiliary::strtok(&header, header_separator);
+				++column_position;
+			}
+		}
+
+		map_file_total_columns = column_position;
+
+		if (map_marker_column_pos < 0) {
+			throw AnnotatorException("Annotator", "process_map_file_header()", __LINE__, 7, (map_marker_column != NULL) ? map_marker_column : "NULL", map_file);
+		}
+
+		if (map_chr_column_pos < 0) {
+			throw AnnotatorException("Annotator", "process_map_file_header()", __LINE__, 7, (map_chr_column != NULL) ? map_chr_column : "NULL", map_file);
+		}
+
+		if (map_position_column_pos < 0) {
+			throw AnnotatorException("Annotator", "process_map_file_header()", __LINE__, 7, (map_position_column != NULL) ? map_position_column : "NULL", map_file);
+		}
+	} catch (ReaderException &e) {
+		AnnotatorException new_e(e);
+		new_e.add_message("Annotator", "process_map_file_header()", __LINE__, 6, map_file);
+		throw new_e;
+	} catch (DescriptorException &e) {
+		AnnotatorException new_e(e);
+		new_e.add_message("Annotator", "process_map_file_header()", __LINE__, 6, map_file);
+		throw new_e;
+	}
+}
+
+void Annotator::process_map_file_data() throw (AnnotatorException) {
+	Descriptor* descriptor = NULL;
+	char* line = NULL;
+	int line_length = 0;
+	unsigned int line_number = 2u;
+
+	char data_separator = '\0';
+
+	char* token = NULL;
+	char* end_ptr = NULL;
+
+	int column_position = 0;
+
+	const char* map_marker_column = NULL;
+	const char* map_chr_column = NULL;
+	const char* map_position_column = NULL;
+
+	char* map_marker_token = NULL;
+	char* map_chr_token = NULL;
+	char* map_position_token = NULL;
+
+	char* map_marker = NULL;
+	marker_coords* coords = NULL;
+
+	if ((gwafile == NULL) || (map_file == NULL)) {
+		return;
+	}
+
+	try {
+		descriptor = gwafile->get_descriptor();
+		data_separator = gwafile->get_regions_file_data_separator();
+
+		map_marker_column = descriptor->get_property(Descriptor::MAP_MARKER);
+		map_chr_column = descriptor->get_property(Descriptor::MAP_CHR);
+		map_position_column = descriptor->get_property(Descriptor::MAP_POSITION);
+
+		coords = new marker_coords();
+
+		while ((line_length = map_reader.read_line()) > 0) {
+			line = *map_reader.line;
+
+			column_position = 0;
+			map_marker_token = NULL;
+			map_chr_token = NULL;
+			map_position_token = NULL;
+			token = auxiliary::strtok(&line, data_separator);
+			while (token != NULL) {
+				if (column_position == map_marker_column_pos) {
+					map_marker_token = token;
+				} else if (column_position == map_chr_column_pos) {
+					map_chr_token = token;
+				} else if (column_position == map_position_column_pos) {
+					map_position_token = token;
+				}
+				token = auxiliary::strtok(&line, data_separator);
+				++column_position;
+			}
+
+			if (column_position < map_file_total_columns) {
+				throw AnnotatorException("Annotator", "process_map_file_data()", __LINE__, 8, line_number, map_file, column_position, map_file_total_columns);
+			} else if (column_position > map_file_total_columns) {
+				throw AnnotatorException("Annotator", "process_map_file_data()", __LINE__, 9, line_number, map_file, column_position, map_file_total_columns);
+			}
+
+			if (auxiliary::strcmp_ignore_case(map_marker_token, "NA") != 0) {
+				coords->chr = map_chr_token;
+
+				coords->position = (int)strtol(map_position_token, &end_ptr, 10);
+				if (*end_ptr != '\0') {
+					throw AnnotatorException("Annotator", "process_map_file_data()",  __LINE__, 10, map_position_token, map_position_column, line_number);
+				}
+
+				if (coords->position < 0) {
+					throw AnnotatorException("Annotator", "process_map_file_data()",  __LINE__, 11, map_position_column, coords->position, line_number);
+				}
+
+				map_index_it = map_index.find(map_marker_token);
+				if (map_index_it == map_index.end()) {
+					map_coords = new set<marker_coords*, marker_coords>();
+
+					map_marker = (char*)malloc((strlen(map_marker_token) + 1u)  * sizeof(char));
+					if (map_marker == NULL) {
+						throw AnnotatorException("Annotator", "process_map_file_data()",  __LINE__, 2, ((strlen(map_marker_token) + 1u) * sizeof(char)));
+					}
+					strcpy(map_marker, map_marker_token);
+
+					map_index.insert(pair<char*, set<marker_coords*, marker_coords>*>(map_marker, map_coords));
+				} else {
+					map_coords = map_index_it->second;
+				}
+
+				if (map_coords->find(coords) == map_coords->end()) {
+					coords->chr = (char*)malloc((strlen(map_chr_token) + 1u) * sizeof(char));
+					if (coords->chr == NULL) {
+						throw AnnotatorException("Annotator", "process_map_file_data()",  __LINE__, 2, ((strlen(map_chr_token) + 1u) * sizeof(char)));
+					}
+					strcpy(coords->chr, map_chr_token);
+
+					map_coords->insert(coords);
+
+					coords = new marker_coords();
+				} else {
+					coords->chr = NULL;
+					coords->position = numeric_limits<int>::min();
+				}
+			}
+			++line_number;
+		}
+
+		if (coords->chr == NULL) {
+			delete coords;
+			coords = NULL;
+		}
+
+		if (line_length == 0) {
+			throw AnnotatorException("Annotator", "process_map_file_data()", __LINE__, 13, line_number, map_file);
+		}
+	} catch (ReaderException &e) {
+		AnnotatorException new_e(e);
+		new_e.add_message("Annotator", "process_map_file_data()", __LINE__, 14, map_file);
+		throw new_e;
+	} catch (DescriptorException &e) {
+		AnnotatorException new_e(e);
+		new_e.add_message("Annotator", "process_map_file_data()", __LINE__, 14, map_file);
+		throw new_e;
+	} catch (AnnotatorException &e) {
+		e.add_message("Annotator", "process_map_file_data()", __LINE__, 14, map_file);
+		throw;
+	}
+}
+
 void Annotator::write_char_vector(ofstream &ofile_stream, vector<char*>* values, char separator) throw (ofstream::failure) {
 	int size = 0;
 	if ((values != NULL) && ((size = values->size()) > 0)) {
@@ -690,4 +1357,8 @@ void Annotator::write_char_vector(ofstream &ofile_stream, vector<char*>* values,
 		}
 		ofile_stream << values->at(size);
 	}
+}
+
+bool Annotator::is_map_present() {
+	return has_map;
 }
