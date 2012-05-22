@@ -19,6 +19,9 @@
 
 #include "include/Annotator.h"
 
+const unsigned int Annotator::MAP_HEAP_SIZE = 3000000;
+const unsigned int Annotator::MAP_HEAP_INCREMENT = 10000;
+
 Annotator::Annotator() : gwafile(NULL), regions_file(NULL), map_file(NULL),
 	header_backup(NULL),
 	total_columns(numeric_limits<int>::min()),
@@ -35,8 +38,11 @@ Annotator::Annotator() : gwafile(NULL), regions_file(NULL), map_file(NULL),
 	map_chr_column_pos(numeric_limits<int>::min()),
 	map_position_column_pos(numeric_limits<int>::min()),
 	regions_indices(auxiliary::bool_strcmp),
-	map_index(auxiliary::bool_strcmp),
-	map_coords(NULL) {
+	map_index(NULL),
+	map_chromosomes(NULL),
+	map_positions(NULL),
+	map_index_size(0u),
+	current_map_heap_size(0u) {
 
 }
 
@@ -49,23 +55,28 @@ Annotator::~Annotator() {
 	}
 	regions_indices.clear();
 
-	map_index_it = map_index.begin();
-	while (map_index_it != map_index.end()) {
-		free(map_index_it->first);
-
-		map_coords = map_index_it->second;
-		map_coords_it = map_coords->begin();
-		while (map_coords_it != map_coords->end()) {
-			free((*map_coords_it)->chr);
-			delete *map_coords_it;
-			map_coords_it++;
+	if (map_index != NULL) {
+		for (unsigned int i = 0u; i < map_index_size; ++i) {
+			free(map_index[i].name);
+			map_index[i].name = NULL;
 		}
-		map_coords->clear();
-		delete map_coords;
-
-		map_index_it++;
+		free(map_index);
+		map_index = NULL;
 	}
-	map_index.clear();
+
+	if (map_chromosomes != NULL) {
+		for (unsigned int i = 0u; i < map_index_size; ++i) {
+			free(map_chromosomes[i]);
+			map_chromosomes[i] = NULL;
+		}
+		free(map_chromosomes);
+		map_chromosomes = NULL;
+	}
+
+	if (map_positions != NULL) {
+		free(map_positions);
+		map_positions = NULL;
+	}
 
 	if (header_backup != NULL) {
 		free(header_backup);
@@ -125,23 +136,31 @@ void Annotator::close_gwafile() throw (AnnotatorException) {
 	}
 	regions_indices.clear();
 
-	map_index_it = map_index.begin();
-	while (map_index_it != map_index.end()) {
-		free(map_index_it->first);
-
-		map_coords = map_index_it->second;
-		map_coords_it = map_coords->begin();
-		while (map_coords_it != map_coords->end()) {
-			free((*map_coords_it)->chr);
-			delete *map_coords_it;
-			map_coords_it++;
+	if (map_index != NULL) {
+		for (unsigned int i = 0u; i < map_index_size; ++i) {
+			free(map_index[i].name);
+			map_index[i].name = NULL;
 		}
-		map_coords->clear();
-		delete map_coords;
-
-		map_index_it++;
+		free(map_index);
+		map_index = NULL;
 	}
-	map_index.clear();
+
+	if (map_chromosomes != NULL) {
+		for (unsigned int i = 0u; i < map_index_size; ++i) {
+			free(map_chromosomes[i]);
+			map_chromosomes[i] = NULL;
+		}
+		free(map_chromosomes);
+		map_chromosomes = NULL;
+	}
+
+	if (map_positions != NULL) {
+		free(map_positions);
+		map_positions = NULL;
+	}
+
+	map_index_size = 0u;
+	current_map_heap_size = 0u;
 
 	if (header_backup != NULL) {
 		free(header_backup);
@@ -333,23 +352,31 @@ void Annotator::index_map() throw (AnnotatorException) {
 		return;
 	}
 
-	map_index_it = map_index.begin();
-	while (map_index_it != map_index.end()) {
-		free(map_index_it->first);
-
-		map_coords = map_index_it->second;
-		map_coords_it = map_coords->begin();
-		while (map_coords_it != map_coords->end()) {
-			free((*map_coords_it)->chr);
-			delete *map_coords_it;
-			map_coords_it++;
+	if (map_index != NULL) {
+		for (unsigned int i = 0u; i < map_index_size; ++i) {
+			free(map_index[i].name);
+			map_index[i].name = NULL;
 		}
-		map_coords->clear();
-		delete map_coords;
-
-		map_index_it++;
+		free(map_index);
+		map_index = NULL;
 	}
-	map_index.clear();
+
+	if (map_chromosomes != NULL) {
+		for (unsigned int i = 0u; i < map_index_size; ++i) {
+			free(map_chromosomes[i]);
+			map_chromosomes[i] = NULL;
+		}
+		free(map_chromosomes);
+		map_chromosomes = NULL;
+	}
+
+	if (map_positions != NULL) {
+		free(map_positions);
+		map_positions = NULL;
+	}
+
+	map_index_size = 0u;
+	current_map_heap_size = 0u;
 
 	try {
 		open_map_file();
@@ -598,8 +625,12 @@ void Annotator::annotate_with_map() throw (AnnotatorException) {
 
 	const char* column_name = NULL;
 
-	char* marker_token = NULL;
-	marker_coords* coords = NULL;
+	marker_index key_marker_index;
+	marker_index* found_marker_index = NULL;
+	unsigned int found_marker_index_pos = 0u;
+	unsigned int index = 0u;
+	char* chr = NULL;
+	int position = 0;
 
 	vector<double>* deviation = NULL;
 	int deviation_value = 0;
@@ -681,11 +712,11 @@ void Annotator::annotate_with_map() throw (AnnotatorException) {
 				}
 
 				column_position = 0;
-				marker_token = NULL;
+				key_marker_index.name = NULL;
 				token = auxiliary::strtok(&line, data_separator);
 				while (token != NULL) {
 					if (column_position == marker_column_pos) {
-						marker_token = token;
+						key_marker_index.name = token;
 					}
 					token = auxiliary::strtok(&line, data_separator);
 					++column_position;
@@ -697,38 +728,39 @@ void Annotator::annotate_with_map() throw (AnnotatorException) {
 					throw AnnotatorException("Annotator", "annotate_with_map()", __LINE__, 9, line_number, gwafile->get_descriptor()->get_name(), column_position, total_columns);
 				}
 
-				map_index_it = map_index.find(marker_token);
-				if (map_index_it == map_index.end()) {
+				found_marker_index = (marker_index*)bsearch(&key_marker_index, map_index, map_index_size, sizeof(marker_index), qsort_marker_index_cmp);
+				if (found_marker_index == NULL) {
 					if (regions_append) {
 						ofile_stream << line_backup << data_separator << "NA" << data_separator << "NA";
 					} else {
-						ofile_stream << marker_token << data_separator << "NA" << data_separator << "NA";
+						ofile_stream << key_marker_index.name << data_separator << "NA" << data_separator << "NA";
 					}
 					for (unsigned int i = 0u; i < deviation->size(); ++i) {
 						ofile_stream << data_separator << "NA";
 					}
 					ofile_stream << endl;
 				} else {
-					map_coords = map_index_it->second;
-					map_coords_it = map_coords->begin();
-					while (map_coords_it != map_coords->end()) {
-						coords = *map_coords_it;
+					found_marker_index_pos = found_marker_index - map_index;
+					while ((found_marker_index_pos < map_index_size) && (auxiliary::strcmp_ignore_case(key_marker_index.name, map_index[found_marker_index_pos].name) == 0)) {
+						index = map_index[found_marker_index_pos].index;
+						chr = map_chromosomes[index];
+						position = map_positions[index];
 
 						if (regions_append) {
-							ofile_stream << line_backup << data_separator << coords->chr << data_separator << coords->position;
+							ofile_stream << line_backup << data_separator << chr << data_separator << position;
 						} else {
-							ofile_stream << marker_token << data_separator << coords->chr << data_separator << coords->position;
+							ofile_stream << key_marker_index.name << data_separator << chr << data_separator << position;
 						}
 
-						regions_indices_it = regions_indices.find(coords->chr);
+						regions_indices_it = regions_indices.find(chr);
 						if (regions_indices_it != regions_indices.end()) {
 							genes_index = regions_indices_it->second;
 
 							deviation_value = (int)deviation->back();
-							genes_index->get_intersecting_intervals(coords->position - deviation_value, coords->position + deviation_value, deviation_value, genes_index_subset);
+							genes_index->get_intersecting_intervals(position - deviation_value, position + deviation_value, deviation_value, genes_index_subset);
 							for (int i = deviation->size() - 2; i >= 0; --i) {
 								deviation_value = (int)deviation->at(i);
-								genes_index_subset.mark_intersecting_intervals(coords->position - deviation_value, coords->position + deviation_value, deviation_value);
+								genes_index_subset.mark_intersecting_intervals(position - deviation_value, position + deviation_value, deviation_value);
 							}
 
 							genes_index_subset.get_marked_values(annotated_genes);
@@ -766,7 +798,7 @@ void Annotator::annotate_with_map() throw (AnnotatorException) {
 							ofile_stream << endl;
 						}
 
-						map_coords_it++;
+						++found_marker_index_pos;
 					}
 				}
 
@@ -1238,8 +1270,9 @@ void Annotator::process_map_file_data() throw (AnnotatorException) {
 	char* map_chr_token = NULL;
 	char* map_position_token = NULL;
 
-	char* map_marker = NULL;
-	marker_coords* coords = NULL;
+	marker_index* map_index_new = NULL;
+	char** map_chromosomes_new = NULL;
+	int* map_positions_new = NULL;
 
 	if ((gwafile == NULL) || (map_file == NULL)) {
 		return;
@@ -1253,7 +1286,22 @@ void Annotator::process_map_file_data() throw (AnnotatorException) {
 		map_chr_column = descriptor->get_property(Descriptor::MAP_CHR);
 		map_position_column = descriptor->get_property(Descriptor::MAP_POSITION);
 
-		coords = new marker_coords();
+		current_map_heap_size = MAP_HEAP_SIZE;
+
+		map_index = (marker_index*)malloc(current_map_heap_size * sizeof(marker_index));
+		if (map_index == NULL) {
+			throw AnnotatorException("Annotator", "process_map_file_data()", __LINE__, 2, (current_map_heap_size * sizeof(marker_index)));
+		}
+
+		map_chromosomes = (char**)malloc(current_map_heap_size * sizeof(char*));
+		if (map_chromosomes == NULL) {
+			throw AnnotatorException("Annotator", "process_map_file_data()", __LINE__, 2, (current_map_heap_size * sizeof(char*)));
+		}
+
+		map_positions = (int*)malloc(current_map_heap_size * sizeof(int));
+		if (map_positions == NULL) {
+			throw AnnotatorException("Annotator", "process_map_file_data()", __LINE__, 2, (current_map_heap_size * sizeof(int)));
+		}
 
 		while ((line_length = map_reader.read_line()) > 0) {
 			line = *map_reader.line;
@@ -1282,58 +1330,65 @@ void Annotator::process_map_file_data() throw (AnnotatorException) {
 			}
 
 			if (auxiliary::strcmp_ignore_case(map_marker_token, "NA") != 0) {
-				coords->chr = map_chr_token;
+				if (map_index_size >= current_map_heap_size) {
+					current_map_heap_size += MAP_HEAP_INCREMENT;
 
-				coords->position = (int)strtol(map_position_token, &end_ptr, 10);
+					map_index_new = (marker_index*)realloc(map_index, current_map_heap_size * sizeof(marker_index));
+					if (map_index_new == NULL) {
+						throw AnnotatorException("Annotator", "process_map_file_data()", __LINE__, 22);
+					}
+					map_index = map_index_new;
+					map_index_new = NULL;
+
+					map_chromosomes_new = (char**)realloc(map_chromosomes, current_map_heap_size * sizeof(char*));
+					if (map_chromosomes_new == NULL) {
+						throw AnnotatorException("Annotator", "process_map_file_data()", __LINE__, 22);
+					}
+					map_chromosomes = map_chromosomes_new;
+					map_chromosomes_new = NULL;
+
+					map_positions_new = (int*)realloc(map_positions, current_map_heap_size * sizeof(int));
+					if (map_positions_new == NULL) {
+						throw AnnotatorException("Annotator", "process_map_file_data()", __LINE__, 22);
+					}
+					map_positions = map_positions_new;
+					map_positions_new = NULL;
+				}
+
+				map_index[map_index_size].name = (char*)malloc((strlen(map_marker_token) + 1u)  * sizeof(char));
+				if (map_index[map_index_size].name == NULL) {
+					throw AnnotatorException("Annotator", "process_map_file_data()",  __LINE__, 2, ((strlen(map_marker_token) + 1u) * sizeof(char)));
+				}
+				strcpy(map_index[map_index_size].name, map_marker_token);
+
+				map_index[map_index_size].index = map_index_size;
+
+				map_chromosomes[map_index_size]  = (char*)malloc((strlen(map_chr_token) + 1u) * sizeof(char));
+				if (map_chromosomes[map_index_size]  == NULL) {
+					throw AnnotatorException("Annotator", "process_map_file_data()",  __LINE__, 2, ((strlen(map_chr_token) + 1u) * sizeof(char)));
+				}
+				strcpy(map_chromosomes[map_index_size], map_chr_token);
+
+				map_positions[map_index_size] = (int)strtol(map_position_token, &end_ptr, 10);
 				if (*end_ptr != '\0') {
 					throw AnnotatorException("Annotator", "process_map_file_data()",  __LINE__, 10, map_position_token, map_position_column, line_number);
 				}
 
-				if (coords->position < 0) {
-					throw AnnotatorException("Annotator", "process_map_file_data()",  __LINE__, 11, map_position_column, coords->position, line_number);
+				if (map_positions[map_index_size] < 0) {
+					throw AnnotatorException("Annotator", "process_map_file_data()",  __LINE__, 11, map_position_column, map_positions[map_index_size], line_number);
 				}
 
-				map_index_it = map_index.find(map_marker_token);
-				if (map_index_it == map_index.end()) {
-					map_coords = new set<marker_coords*, marker_coords>();
-
-					map_marker = (char*)malloc((strlen(map_marker_token) + 1u)  * sizeof(char));
-					if (map_marker == NULL) {
-						throw AnnotatorException("Annotator", "process_map_file_data()",  __LINE__, 2, ((strlen(map_marker_token) + 1u) * sizeof(char)));
-					}
-					strcpy(map_marker, map_marker_token);
-
-					map_index.insert(pair<char*, set<marker_coords*, marker_coords>*>(map_marker, map_coords));
-				} else {
-					map_coords = map_index_it->second;
-				}
-
-				if (map_coords->find(coords) == map_coords->end()) {
-					coords->chr = (char*)malloc((strlen(map_chr_token) + 1u) * sizeof(char));
-					if (coords->chr == NULL) {
-						throw AnnotatorException("Annotator", "process_map_file_data()",  __LINE__, 2, ((strlen(map_chr_token) + 1u) * sizeof(char)));
-					}
-					strcpy(coords->chr, map_chr_token);
-
-					map_coords->insert(coords);
-
-					coords = new marker_coords();
-				} else {
-					coords->chr = NULL;
-					coords->position = numeric_limits<int>::min();
-				}
+				++map_index_size;
 			}
 			++line_number;
-		}
-
-		if (coords->chr == NULL) {
-			delete coords;
-			coords = NULL;
 		}
 
 		if (line_length == 0) {
 			throw AnnotatorException("Annotator", "process_map_file_data()", __LINE__, 13, line_number, map_file);
 		}
+
+		qsort(map_index, map_index_size, sizeof(marker_index), qsort_marker_index_cmp);
+
 	} catch (ReaderException &e) {
 		AnnotatorException new_e(e);
 		new_e.add_message("Annotator", "process_map_file_data()", __LINE__, 14, map_file);
@@ -1361,4 +1416,8 @@ void Annotator::write_char_vector(ofstream &ofile_stream, vector<char*>* values,
 
 bool Annotator::is_map_present() {
 	return has_map;
+}
+
+inline int Annotator::qsort_marker_index_cmp(const void* first, const void* second) {
+	return auxiliary::strcmp_ignore_case(((marker_index*)first)->name, ((marker_index*)second)->name);
 }

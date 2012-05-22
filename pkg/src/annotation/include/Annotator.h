@@ -62,25 +62,18 @@ private:
 	map<char*, IntervalTree<char*>*, bool(*)(const char*, const char*)> regions_indices;
 	map<char*, IntervalTree<char*>*, bool(*)(const char*, const char*)>::iterator regions_indices_it;
 
-	struct marker_coords {
-		char* chr;
-		int position;
-
-		bool operator()(const marker_coords* first, const marker_coords* second) const {
-			int result = 0;
-
-			if ((result = auxiliary::strcmp_ignore_case(first->chr, second->chr)) == 0) {
-				return (first->position < second->position);
-			}
-
-			return (result < 0);
-		}
+	struct marker_index {
+		char* name;
+		unsigned int index;
 	};
 
-	map<char*, set<marker_coords*, marker_coords>*, bool(*)(const char*, const char*)> map_index;
-	map<char*, set<marker_coords*, marker_coords>*, bool(*)(const char*, const char*)>::iterator map_index_it;
-	set<marker_coords*, marker_coords>* map_coords;
-	set<marker_coords*, marker_coords>::iterator map_coords_it;
+	marker_index* map_index;
+	char** map_chromosomes;
+	int* map_positions;
+	unsigned int map_index_size;
+	unsigned int current_map_heap_size;
+
+	static int qsort_marker_index_cmp(const void* first, const void* second);
 
 	void process_header_with_map() throw (AnnotatorException);
 	void process_header_without_map() throw (AnnotatorException);
@@ -100,6 +93,9 @@ private:
 	void write_char_vector(ofstream &ofile_stream, vector<char*>* values, char separator) throw (ofstream::failure);
 
 public:
+	static const unsigned int MAP_HEAP_SIZE;
+	static const unsigned int MAP_HEAP_INCREMENT;
+
 	Annotator();
 	virtual ~Annotator();
 
