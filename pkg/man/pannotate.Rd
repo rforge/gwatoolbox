@@ -1,17 +1,25 @@
-\name{annotate}
-\alias{annotate}
+\name{pannotate}
+\alias{pannotate}
 \title{SNPs annotation with regions (e.g. genes).}
-\description{For provided SNPs finds all genes in specified deviation around them (e.g. 0, +/- 50000, +/- 100000, ... ).}
-\usage{annotate(script)}
+\description{
+	For provided SNPs finds all genes in specified deviation (e.g. 0, +/- 50000, +/- 100000, ... ).
+	The function is analogous to \code{\link{annotate}} and supports parallel processing of multiple GWAS data files.
+	The parallelization is implemented with \pkg{snow} package using \dQuote{SOCK} cluster type.
+}
+\usage{pannotate(script, processes)}
 \arguments{
 	\item{script}{
 		Name of a textual input file with processing instructions. 
 		The file should contain the names and locations of all GWAS data files to be annotated 
 		along with basic information from each individual study.
 	}
+	\item{processes}{
+		An integer greater than 1, which indicates the number of parallel processes. 
+		All processes are created on a \emph{localhost} and communicate through sockets.
+	}
 }
 \details{
-	Function \code{annotate()} annotates every marker in input files with regions (e.g. genes) that contain it or fall in a specified windows around it (e.g. +/-50kb, +/-100kb and etc).
+	Function \code{pannotate()} annotates every marker in input files with regions (e.g. genes) that contain it or fall in a specified windows around it (e.g. +/-50kb, +/-100kb and etc).
 	The arbitrary number of windows of various sizes can be specified in the input script.
 	The regions with their chromosomal coordinates must be provided in a separate file.
 	It is possible to annotate markers if only their names are available (e.g. rsId) in input files, or if there is a need to change chromosomal positions (e.g. if different version of human genome build should be used).
@@ -71,7 +79,7 @@
 		CHR\tab Chromosome number or name\cr
 		POSITION\tab Marker position
 	}
-	Given that different names can be provided for each GWAS data file, \code{annotate()} allows to redefine the default values for 
+	Given that different names can be provided for each GWAS data file, \code{pannotate()} allows to redefine the default values for 
 	every input file in the input script. 
 	The redefinition command consists of the default column name followed by the new column name.
 	When the map file is specified using command \bold{MAP_FILE}, then \bold{CHR} and \bold{POSITION} columns in the GWAS data file are not required.
@@ -103,7 +111,7 @@
 		REGION_START\tab Region (e.g. gene) start position\cr
 		REGION_END\tab Region (e.g.) end position
 	}
-	Given that different names can be provided for each regions file, \code{annotate()} allows to redefine the default values for 
+	Given that different names can be provided for each regions file, \code{pannotate()} allows to redefine the default values for 
 	every regions file in the input script. 
 	The redefinition command consists of the default column name followed by the present column name. 
 	
@@ -136,7 +144,7 @@
 		MAP_CHR\tab Chromosome number or name\cr
 		MAP_POSITION\tab Marker position
 	}
-	Given that different names can be provided for each map file, \code{annotate()} allows to redefine the default values for 
+	Given that different names can be provided for each map file, \code{pannotate()} allows to redefine the default values for 
 	every map file in the input script. 
 	The redefinition command consists of the default column name followed by the present column name. 
 	
@@ -163,7 +171,7 @@
 }
 \section{Field Separator in Input Data Files}{
 	The field (column) separator can be different for each GWAS data file.
-	\code{annotate()} automatically detects the original separator field for each input file \emph{based on the first 10 rows}. 
+	\code{pannotate()} automatically detects the original separator field for each input file \emph{based on the first 10 rows}. 
 	However, the user has the possibility to specify the original separator manually for each individual file using the command \bold{SEPARATOR}. 
 	The supported arguments and related separators are listed below:
 	\tabular{ll}{
@@ -186,7 +194,7 @@
 }
 \section{Field Separator in Regions Files}{
 	The field (column) separator can be different for each regions file.
-	\code{annotate()} automatically detects the original separator field for each regions file \emph{based on the first 10 rows}. 
+	\code{pannotate()} automatically detects the original separator field for each regions file \emph{based on the first 10 rows}. 
 	However, the user has the possibility to specify the original separator manually for each individual file using the command \bold{REGIONS_FILE_SEPARATOR}. 
 	The supported arguments and related separators are listed below:
 	\tabular{ll}{
@@ -212,7 +220,7 @@
 }
 \section{Field Separator in Map Files}{
 	The field (column) separator can be different for each map file.
-	\code{annotate()} automatically detects the original separator field for each map file \emph{based on the first 10 rows}. 
+	\code{pannotate()} automatically detects the original separator field for each map file \emph{based on the first 10 rows}. 
 	However, the user has the possibility to specify the original separator manually for each individual file using the command \bold{MAP_FILE_SEPARATOR}. 
 	The supported arguments and related separators are listed below:
 	\tabular{ll}{
@@ -239,7 +247,7 @@
 	for the map files \file{map_file_2.csv} and \file{map_file_3.txt} the separator is manually set to comma by the user.
 }
 \section{Case Sensitivity}{
-	By default the \code{annotate()} assumes that column names in the all specified files are case insensitive. 
+	By default the \code{pannotate()} assumes that column names in the all specified files are case insensitive. 
 	For example, the column names \emph{CHR}, \emph{Chr}, and \emph{chr} are all perfectly equivalent.
 	This behaviour can be modified for every input file in the input script using the command \bold{CASESENSITIVE}, 
 	that controls case sensitivity for the column names, as specified below:
@@ -265,7 +273,7 @@
 }
 \section{Specifying Window Size For Annotation}{
 	Every marker in the GWAS data file is annotated with the regions (e.g. genes) that fall in a particular window around it.
-	\code{annotate()} allows to specify multiple window sizes using command \bold{REGIONS_DEVIATION}.
+	\code{pannotate()} allows to specify multiple window sizes using command \bold{REGIONS_DEVIATION}.
 	Command \bold{REGIONS_DEVIATION} is followed by an arbitrary number of positive integers that specify window sizes around markers in base pairs.
 	Each specified window size results in a new output column where all regions overlapping with this window are reported.
 	The ouptut columns are ordered by window size starting with the smallest.
@@ -286,7 +294,7 @@
 }
 \section{Specifying Output Format}{
 	Often GWAS data file contains many columns that are not required in the output files with annotation results.
-	By default, in addition to columns with annotated regions, \code{annotate()} outputs only columns with marker name, chromosome name and position.
+	By default, in addition to columns with annotated regions, \code{pannotate()} outputs only columns with marker name, chromosome name and position.
 	This behaviour can be modified for every input file in the input script using the command \bold{REGIONS_APPEND}.
 	The supported arguments are listed below:
 	\tabular{ll}{
@@ -338,7 +346,7 @@
 	}
 	
 	# name of an input script
-	script <- "ANNOTATE_script.txt"
+	script <- "PANNOTATE_script.txt"
 	
 	# load GWAtoolbox library
 	library(GWAtoolbox)
@@ -348,8 +356,8 @@
 	
 	\dontshow{options(device.ask.default = FALSE)}
 	
-	# run annotate() function
-	annotate(script)
+	# run pannotate() function with 2 parallel processes
+	pannotate(script, 2)
 	
 	\dontshow{
 	# restore previous workspace

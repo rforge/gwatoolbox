@@ -1329,7 +1329,9 @@ void Annotator::process_map_file_data() throw (AnnotatorException) {
 				throw AnnotatorException("Annotator", "process_map_file_data()", __LINE__, 9, line_number, map_file, column_position, map_file_total_columns);
 			}
 
-			if (auxiliary::strcmp_ignore_case(map_marker_token, "NA") != 0) {
+			if ((auxiliary::strcmp_ignore_case(map_marker_token, "NA") != 0) &&
+					(auxiliary::strcmp_ignore_case(map_chr_token, "NA") != 0) &&
+					(auxiliary::strcmp_ignore_case(map_position_token, "NA") != 0)) {
 				if (map_index_size >= current_map_heap_size) {
 					current_map_heap_size += MAP_HEAP_INCREMENT;
 
