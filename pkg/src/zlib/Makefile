@@ -19,7 +19,7 @@
 
 include $(R_MAKECONF)
 
-gwalib:	Reader.o TextReader.o  GzipReader.o ReaderFactory.o ReaderException.o
+gwalib:	adler32.o compress.o crc32.o deflate.o gzclose.o gzlib.o gzread.o gzwrite.o infback.o inffast.o inflate.o inftrees.o trees.o uncompr.o zutil.o
 
 clean:  
 	@-rm -f *.o

@@ -1,11 +1,11 @@
 Package: GWAtoolbox
-Version: 2.1.2
-Date: 2012-08-08
+Version: 2.2.2
+Date: 2012-08-20
 Title: GWAS Quality Control
 Author: Daniel Taliun <Daniel.Taliun@eurac.edu>, Christian Fuchsberger <cfuchsb@umich.edu>, Cristian Pattaro <Cristian.Pattaro@eurac.edu>
 Maintainer: Daniel Taliun <Daniel.Taliun@eurac.edu> 
 Description: Controls for duplicated IDs, distribution of betas, SEs, etc.
-Depends: R (>= 2.13.1)
+Depends: R (>= 2.15.0)
 Suggests: snow
 SystemRequirements: GNU GSL
 License: GPL (>=3)

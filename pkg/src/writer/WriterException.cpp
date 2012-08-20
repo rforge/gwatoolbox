@@ -17,28 +17,24 @@
  * along with GWAtoolbox.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "include/ReaderException.h"
+#include "include/WriterException.h"
 
-const int ReaderException::MESSAGE_TEMPLATES_NUMBER = 11;
-const char* ReaderException::MESSAGE_TEMPLATES[] = {
+const int WriterException::MESSAGE_TEMPLATES_NUMBER = 7;
+const char* WriterException::MESSAGE_TEMPLATES[] = {
 /*00*/	"The '%s' argument has NULL value.",
 /*01*/	"The '%s' argument has an invalid value.",
 /*02*/	"Memory allocation error (%d bytes).",
 /*03*/	"Error while opening '%s' file.",
-/*04*/	"Error while reading '%s' file.",
+/*04*/	"Error while writing '%s' file.",
 /*05*/	"Error while closing '%s' file.",
-/*06*/	"Error while setting the read position in '%s' file.",
-/*07*/	"Error while inspecting lines in '%s' file.",
-/*08*/	"Failed to automatically detect the field separator in '%s' file.",
-/*09*/	"Error while getting the read position in '%s' file.",
-/*10*/	"Error while initializing reading facilities for '%s' file."
+/*06*/	"Error while initializing writing facilities for '%s' file type."
 };
 
-ReaderException::ReaderException() : Exception() {
+WriterException::WriterException() : Exception() {
 
 }
 
-ReaderException::ReaderException(int message_template_index, ... ) : Exception()  {
+WriterException::WriterException(int message_template_index, ... ) : Exception()  {
 	va_list arguments;
 
 	va_start(arguments, message_template_index);
@@ -46,11 +42,11 @@ ReaderException::ReaderException(int message_template_index, ... ) : Exception()
 	va_end(arguments);
 }
 
-ReaderException::ReaderException(const char* class_name, const char* method_name, int source_line) : Exception(class_name, method_name, source_line)  {
+WriterException::WriterException(const char* class_name, const char* method_name, int source_line) : Exception(class_name, method_name, source_line)  {
 
 }
 
-ReaderException::ReaderException(const char* class_name, const char* method_name, int source_line, int message_template_index, ... ) : Exception() {
+WriterException::WriterException(const char* class_name, const char* method_name, int source_line, int message_template_index, ... ) : Exception() {
 	va_list arguments;
 
 	va_start(arguments, message_template_index);
@@ -58,15 +54,15 @@ ReaderException::ReaderException(const char* class_name, const char* method_name
 	va_end(arguments);
 }
 
-ReaderException::ReaderException(const Exception& exception) : Exception(exception) {
+WriterException::WriterException(const Exception& exception) : Exception(exception) {
 
 }
 
-ReaderException::~ReaderException() throw() {
+WriterException::~WriterException() throw() {
 
 }
 
-const char* ReaderException::get_message_template(int message_template_index) {
+const char* WriterException::get_message_template(int message_template_index) {
 	if ((message_template_index >= 0) && (message_template_index < MESSAGE_TEMPLATES_NUMBER)) {
 		return  MESSAGE_TEMPLATES[message_template_index];
 	}

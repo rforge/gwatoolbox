@@ -19,7 +19,7 @@
 
 include $(R_MAKECONF)
 
-gwalib:	Reader.o TextReader.o  GzipReader.o ReaderFactory.o ReaderException.o
+gwalib:	Harmonizer.o HarmonizerException.o
 
 clean:  
 	@-rm -f *.o

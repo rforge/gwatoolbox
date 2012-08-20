@@ -41,7 +41,7 @@
 #include "../expressions/Lt.h"
 #include "AnalyzerException.h"
 
-#define VERSION	"GWAtoolbox(c) v2.1.2"
+#define VERSION	"GWAtoolbox(c) v2.2.2"
 
 class Analyzer {
 private:
