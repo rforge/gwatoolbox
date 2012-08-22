@@ -619,7 +619,6 @@ void Annotator::annotate_with_map() throw (AnnotatorException) {
 	bool regions_append = false;
 
 	char* token = NULL;
-	char* end_ptr = NULL;
 
 	int column_position = 0;
 

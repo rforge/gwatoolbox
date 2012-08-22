@@ -34,6 +34,7 @@ private:
 
 public:
 	static const unsigned int DEFAULT_BUFFER_SIZE;
+	static const unsigned int TOP_ROWS_NUMBER;
 
 	GzipReader(unsigned int buffer_size = DEFAULT_BUFFER_SIZE) throw (ReaderException);
 	virtual ~GzipReader();
@@ -45,6 +46,7 @@ public:
 	bool eof();
 	bool is_open();
 	bool is_compressed();
+	void detect_field_separators(char* header_separator, char* data_separator) throw (ReaderException);
 };
 
 #endif

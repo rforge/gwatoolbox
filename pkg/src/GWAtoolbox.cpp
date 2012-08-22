@@ -30,6 +30,7 @@
 #include "gwasformat/include/formatter/Formatter.h"
 #include "annotation/include/Annotator.h"
 #include "harmonization/include/Harmonizer.h"
+#include "independization/include/Selector.h"
 
 /* Define LINUX flag for compilation under Linux */
 #ifndef WIN32
@@ -142,6 +143,7 @@ SEXP Descriptor2Robj(SEXP external_descriptor_pointer) {
 	SEXP threshold_value = R_NilValue;
 	SEXP renamed_columns = R_NilValue;
 	SEXP reordered_columns = R_NilValue;
+	SEXP ld_files = R_NilValue;
 
 	if (external_descriptor_pointer == R_NilValue) {
 		error("\nThe external Descriptor pointer argument is NULL.");
@@ -153,7 +155,7 @@ SEXP Descriptor2Robj(SEXP external_descriptor_pointer) {
 
 	descriptor = (Descriptor*)R_ExternalPtrAddr(external_descriptor_pointer);
 
-	PROTECT(attributes = allocVector(STRSXP, 10));
+	PROTECT(attributes = allocVector(STRSXP, 11));
 	SET_STRING_ELT(attributes, 0, mkChar("path_separator"));
 	SET_STRING_ELT(attributes, 1, mkChar("name"));
 	SET_STRING_ELT(attributes, 2, mkChar("path"));
@@ -164,11 +166,12 @@ SEXP Descriptor2Robj(SEXP external_descriptor_pointer) {
 	SET_STRING_ELT(attributes, 7, mkChar("thresholds"));
 	SET_STRING_ELT(attributes, 8, mkChar("renamed_columns"));
 	SET_STRING_ELT(attributes, 9, mkChar("reordered_columns"));
+	SET_STRING_ELT(attributes, 10, mkChar("ld_files"));
 
 	PROTECT(class_name = allocVector(STRSXP, 1));
 	SET_STRING_ELT(class_name, 0, mkChar("Descriptor"));
 
-	PROTECT(descriptor_robj = allocVector(VECSXP, 10));
+	PROTECT(descriptor_robj = allocVector(VECSXP, 11));
 
 	PROTECT(path_separator = allocVector(STRSXP, 1));
 	buffer[0] = descriptor->get_path_separator();
@@ -292,6 +295,21 @@ SEXP Descriptor2Robj(SEXP external_descriptor_pointer) {
 		UNPROTECT(1);
 	}
 
+	if (descriptor->ld_files.size() > 0) {
+		PROTECT(ld_files = allocMatrix(STRSXP, descriptor->ld_files.size(), 2));
+
+		descriptor->map_char_it = descriptor->ld_files.begin();
+		i = 0;
+		while (descriptor->map_char_it != descriptor->ld_files.end()) {
+			SET_STRING_ELT(ld_files, i, mkChar(descriptor->map_char_it->first));
+			SET_STRING_ELT(ld_files, i + descriptor->ld_files.size(), mkChar(descriptor->map_char_it->second));
+			i += 1;
+			descriptor->map_char_it++;
+		}
+
+		UNPROTECT(1);
+	}
+
 	SET_VECTOR_ELT(descriptor_robj, 0, path_separator);
 	SET_VECTOR_ELT(descriptor_robj, 1, name);
 	SET_VECTOR_ELT(descriptor_robj, 2, path);
@@ -302,6 +320,7 @@ SEXP Descriptor2Robj(SEXP external_descriptor_pointer) {
 	SET_VECTOR_ELT(descriptor_robj, 7, thresholds);
 	SET_VECTOR_ELT(descriptor_robj, 8, renamed_columns);
 	SET_VECTOR_ELT(descriptor_robj, 9, reordered_columns);
+	SET_VECTOR_ELT(descriptor_robj, 10, ld_files);
 
 	setAttrib(descriptor_robj, R_NamesSymbol, attributes);
 	setAttrib(descriptor_robj, R_ClassSymbol, class_name);
@@ -346,6 +365,7 @@ SEXP Robj2Descriptor(SEXP descriptor_Robj) {
 	SEXP threshold_value = R_NilValue;
 	SEXP renamed_columns = R_NilValue;
 	SEXP reordered_columns = R_NilValue;
+	SEXP ld_files = R_NilValue;
 
 	int ncol = 0;
 
@@ -497,6 +517,19 @@ SEXP Robj2Descriptor(SEXP descriptor_Robj) {
 					}
 					for (int j = 0; j < length(reordered_columns); j++) {
 						descriptor->add_reordered_column(CHAR(STRING_ELT(reordered_columns, j)));
+					}
+				}
+			} else if (strcmp(value, "ld_files") == 0) {
+				ld_files = VECTOR_ELT(descriptor_Robj, i);
+				if (ld_files != R_NilValue) {
+					if (!isMatrix(ld_files)) {
+						error("\nMismatch in Descriptor class structure on line %d.", __LINE__);
+					}
+					if ((ncol = length(ld_files)) % 2 != 0) {
+						error("\nMismatch in Descriptor class structure on line %d.", __LINE__);
+					}
+					for (int j = 0; j < ncol / 2; j++) {
+						descriptor->add_ld_file(CHAR(STRING_ELT(ld_files, j)), CHAR(STRING_ELT(ld_files, j + ncol / 2)));
 					}
 				}
 			}
@@ -1465,6 +1498,70 @@ SEXP perform_id_harmonization(SEXP input_file_name, SEXP output_file_name, SEXP 
 	} catch (Exception &e) {
 		error("\n%s", e.what());
 	}
+
+	return R_NilValue;
+}
+
+SEXP perform_snps_independization(SEXP external_descriptor_pointer) {
+	Descriptor* descriptor = NULL;
+	GwaFile* gwa_file = NULL;
+
+	void (GwaFile::*check_functions[6])(Descriptor*) = {
+			&GwaFile::check_prefix,
+			&GwaFile::check_casesensitivity,
+			&GwaFile::check_separators,
+			&GwaFile::check_ld_files,
+			&GwaFile::check_ld_files_separators,
+			&GwaFile::check_ld_threshold
+	};
+
+	if (external_descriptor_pointer == R_NilValue) {
+		error("\nThe external Descriptor pointer argument is NULL.");
+	}
+
+	if (TYPEOF(external_descriptor_pointer) != EXTPTRSXP) {
+		error("\nThe external Descriptor pointer argument has an incorrect type.");
+	}
+
+	descriptor = (Descriptor*)R_ExternalPtrAddr(external_descriptor_pointer);
+
+	try {
+		Selector selector;
+
+		gwa_file = new GwaFile(descriptor, check_functions, 6);
+
+		selector.open_gwafile(gwa_file);
+		selector.process_header();
+
+		selector.close_gwafile();
+
+		delete gwa_file;
+		gwa_file = NULL;
+	} catch (Exception &e) {
+		error("\n%s", e.what());
+	}
+
+/*	try {
+		Annotator annotator;
+
+		gwa_file = new GwaFile(descriptor, check_functions, 8);
+
+		annotator.open_gwafile(gwa_file);
+		annotator.process_header();
+
+		if (annotator.is_map_present()) {
+			annotator.index_map();
+		}
+		annotator.index_regions();
+
+		annotator.annotate();
+
+		annotator.close_gwafile();
+
+		delete gwa_file;
+	} catch (Exception &e) {
+		error("\n%s", e.what());
+	} */
 
 	return R_NilValue;
 }

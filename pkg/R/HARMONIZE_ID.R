@@ -44,7 +44,7 @@ harmonize_id <- function(input, output, map, id = "markername", alleles = c("ref
 		stop("The input file name must be a character string.")
 	}
 	
-		if (is.character(output)) {
+	if (is.character(output)) {
 		if (length(output) <= 0) {
 			stop("The output file name is empty.")
 		} else if (length(output) > 1) {
@@ -86,7 +86,6 @@ harmonize_id <- function(input, output, map, id = "markername", alleles = c("ref
 		stop("The SNP ID column name must be a character string.")
 	}
 	
-
 	if (is.character(alleles)) {
 		if (length(alleles) != 2) {
 			stop("The allele column names must be a character vector of length 2.")	

@@ -57,7 +57,8 @@ GWADIRS = 	auxiliary \
 			gwasqc/libs/analyzer \
 			intervaltree \
 			annotation \
-			harmonization
+			harmonization \
+			independization
 
 GWALIBS = 	auxiliary/*.o \
 			exception/*.o \
@@ -75,7 +76,8 @@ GWALIBS = 	auxiliary/*.o \
 			gwasqc/libs/analyzer/*.o \
 			intervaltree/*.o \
 			annotation/*.o \
-			harmonization/*.o
+			harmonization/*.o \
+			independization/*.o
 			
 .PHONY: all gwalibs
      
