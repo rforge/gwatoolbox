@@ -29,14 +29,14 @@ const char* SelectorException::MESSAGE_TEMPLATES[] = {
 /*05*/	"The header is missing on line %d in '%s' file.",
 /*06*/	"Error while processing header in '%s' file.",
 /*07*/	"Column '%s' is missing in the header of '%s' file.",
+/*08*/	"Line %d in '%s' file contains less columns (%d) than expected (%d).",
+/*09*/	"Line %d in '%s' file contains more columns (%d) than expected (%d).",
+/*10*/	"Error while parsing '%s' value in '%s' column on line %d to an integer.",
+/*11*/	"Line %d is empty in '%s' file.",
+/*12*/	"Error while reading '%s' file.",
 
 
 
-/*08*/	"The mandatory VCF file format information line is incorrect.",
-/*09*/	"The mandatory VCF file format information line is empty.",
-/*10*/	"The mandatory VCF header line was not found.",
-/*11*/	"Column '%s' is missing on position %d.",
-/*12*/	"The header/meta-information on line %d is incorrect.",
 /*13*/	"VCF file line %d is empty.",
 /*14*/	"Line %d in '%s' file contains less columns (%d) than expected (%d).",
 /*15*/	"Line %d in '%s' file contains more columns (%d) than expected (%d).",

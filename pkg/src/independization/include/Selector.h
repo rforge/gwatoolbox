@@ -20,14 +20,23 @@
 #ifndef SELECTOR_H_
 #define SELECTOR_H_
 
+#include <map>
+#include <vector>
+#include <algorithm>
+
 #include "SelectorException.h"
 #include "../../gwafile/include/GwaFile.h"
+
+using namespace std;
 
 class Selector {
 private:
 	GwaFile* gwafile;
 
 	Reader* reader;
+
+	Reader* ld_reader;
+	const char* ld_file_path;
 
 	char* header_backup;
 
@@ -36,7 +45,28 @@ private:
 	int chr_column_pos;
 	int pvalue_column_pos;
 
+	int ld_total_columns;
+	int ld_marker1_column_pos;
+	int ld_marker2_column_pos;
+	int ld_value_column_pos;
+
+	map<char*, map<char*, double, bool(*)(const char*, const char*)>*, bool(*)(const char*, const char*)> markers_by_chr;
+	map<char*, map<char*, double, bool(*)(const char*, const char*)>*, bool(*)(const char*, const char*)>::iterator markers_by_chr_it;
+	map<char*, double, bool(*)(const char*, const char*)>* markers;
+	map<char*, double, bool(*)(const char*, const char*)>::iterator markers_it;
+
+	map<const char*, vector<const char*>*> markers_ld;
+	map<const char*, vector<const char*>*>::iterator markers_ld_it;
+
+	void open_ld_file(const char* file_path) throw (SelectorException);
+	void close_ld_file() throw (SelectorException);
+	void process_ld_header() throw (SelectorException);
+	void process_ld_data() throw (SelectorException);
+	void index_ld(const char* file_path) throw (SelectorException);
+
 public:
+	static const double EPSILON;
+
 	Selector();
 	virtual ~Selector();
 
@@ -44,6 +74,8 @@ public:
 	void close_gwafile() throw (SelectorException);
 
 	void process_header() throw (SelectorException);
+	void process_data() throw (SelectorException);
+	void independize() throw (SelectorException);
 };
 
 #endif

@@ -1506,9 +1506,10 @@ SEXP perform_snps_independization(SEXP external_descriptor_pointer) {
 	Descriptor* descriptor = NULL;
 	GwaFile* gwa_file = NULL;
 
-	void (GwaFile::*check_functions[6])(Descriptor*) = {
+	void (GwaFile::*check_functions[7])(Descriptor*) = {
 			&GwaFile::check_prefix,
 			&GwaFile::check_casesensitivity,
+			&GwaFile::check_missing_value,
 			&GwaFile::check_separators,
 			&GwaFile::check_ld_files,
 			&GwaFile::check_ld_files_separators,
@@ -1528,10 +1529,13 @@ SEXP perform_snps_independization(SEXP external_descriptor_pointer) {
 	try {
 		Selector selector;
 
-		gwa_file = new GwaFile(descriptor, check_functions, 6);
+		gwa_file = new GwaFile(descriptor, check_functions, 7);
 
 		selector.open_gwafile(gwa_file);
 		selector.process_header();
+		selector.process_data();
+
+		selector.independize();
 
 		selector.close_gwafile();
 

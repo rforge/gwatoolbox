@@ -106,6 +106,10 @@ bool GzipReader::eof() {
 	return gzeof(infile) > 0;
 }
 
+bool GzipReader::sof() {
+	return gztell(infile) == 0;
+}
+
 bool GzipReader::is_open() {
 	return opened;
 }

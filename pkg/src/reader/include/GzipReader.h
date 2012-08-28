@@ -44,6 +44,7 @@ public:
 	int read_line() throw (ReaderException);
 	void reset() throw (ReaderException);
 	bool eof();
+	bool sof();
 	bool is_open();
 	bool is_compressed();
 	void detect_field_separators(char* header_separator, char* data_separator) throw (ReaderException);

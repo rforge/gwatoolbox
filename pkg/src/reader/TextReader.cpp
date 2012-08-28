@@ -119,6 +119,10 @@ bool TextReader::eof() {
 	return ifile_stream.eof();
 }
 
+bool TextReader::sof() {
+	return ifile_stream.tellg() == 0;
+}
+
 bool TextReader::is_open() {
 	return ifile_stream.is_open();
 }

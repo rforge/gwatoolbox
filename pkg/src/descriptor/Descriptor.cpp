@@ -1321,12 +1321,36 @@ vector<Descriptor*>* Descriptor::process_instructions(const char* script_name, c
 					}
 				} else if (strcmp(token, LD_MARKER) == 0) {
 					if (tokens.size() >= 2) {
+						if (default_descriptor.get_property(LD_MARKER1) == NULL) {
+							default_descriptor.add_property(LD_MARKER1, LD_MARKER1);
+						}
+
+						if (default_descriptor.get_property(LD_MARKER2) == NULL) {
+							default_descriptor.add_property(LD_MARKER2, LD_MARKER2);
+						}
+
+						if (default_descriptor.get_property(LD_VALUE) == NULL) {
+							default_descriptor.add_property(LD_VALUE, LD_VALUE);
+						}
+
 						default_descriptor.add_property(LD_MARKER1, tokens.front());
 						tokens.pop_front();
 						default_descriptor.add_property(LD_MARKER2, tokens.front());
 					}
 				} else if (strcmp(token, LD_VALUE) == 0) {
 					if (!tokens.empty()) {
+						if (default_descriptor.get_property(LD_MARKER1) == NULL) {
+							default_descriptor.add_property(LD_MARKER1, LD_MARKER1);
+						}
+
+						if (default_descriptor.get_property(LD_MARKER2) == NULL) {
+							default_descriptor.add_property(LD_MARKER2, LD_MARKER2);
+						}
+
+						if (default_descriptor.get_property(LD_VALUE) == NULL) {
+							default_descriptor.add_property(LD_VALUE, LD_VALUE);
+						}
+
 						default_descriptor.add_property(LD_VALUE, tokens.front());
 					}
 				} else if (strcmp(token, LD) == 0) {
