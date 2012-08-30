@@ -118,6 +118,10 @@ bool GzipReader::is_compressed() {
 	return true;
 }
 
+int GzipReader::get_buffer_size() {
+	return buffer_size;
+}
+
 void GzipReader::detect_field_separators(char* header_separator, char* data_separator) throw (ReaderException) {
 	const unsigned int separators_number = 4;
 	char separators[separators_number] = {',', '\t', ' ' , ';'};

@@ -47,6 +47,7 @@ public:
 	bool sof();
 	bool is_open();
 	bool is_compressed();
+	int get_buffer_size();
 	void detect_field_separators(char* header_separator, char* data_separator) throw (ReaderException);
 };
 

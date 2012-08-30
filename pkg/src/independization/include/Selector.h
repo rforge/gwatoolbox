@@ -26,6 +26,7 @@
 
 #include "SelectorException.h"
 #include "../../gwafile/include/GwaFile.h"
+#include "../../writer/include/WriterFactory.h"
 
 using namespace std;
 
@@ -38,7 +39,7 @@ private:
 	Reader* ld_reader;
 	const char* ld_file_path;
 
-	char* header_backup;
+//	char* header_backup;
 
 	int total_columns;
 	int marker_column_pos;
@@ -50,10 +51,13 @@ private:
 	int ld_marker2_column_pos;
 	int ld_value_column_pos;
 
-	map<char*, map<char*, double, bool(*)(const char*, const char*)>*, bool(*)(const char*, const char*)> markers_by_chr;
-	map<char*, map<char*, double, bool(*)(const char*, const char*)>*, bool(*)(const char*, const char*)>::iterator markers_by_chr_it;
-	map<char*, double, bool(*)(const char*, const char*)>* markers;
-	map<char*, double, bool(*)(const char*, const char*)>::iterator markers_it;
+	vector<char*> all_marker_names;
+	vector<char*>::iterator all_marker_names_it;
+
+	map<char*, map<const char*, double, bool(*)(const char*, const char*)>*, bool(*)(const char*, const char*)> markers_by_chr;
+	map<char*, map<const char*, double, bool(*)(const char*, const char*)>*, bool(*)(const char*, const char*)>::iterator markers_by_chr_it;
+	map<const char*, double, bool(*)(const char*, const char*)>* markers;
+	map<const char*, double, bool(*)(const char*, const char*)>::iterator markers_it;
 
 	map<const char*, vector<const char*>*> markers_ld;
 	map<const char*, vector<const char*>*>::iterator markers_ld_it;
@@ -63,6 +67,8 @@ private:
 	void process_ld_header() throw (SelectorException);
 	void process_ld_data() throw (SelectorException);
 	void index_ld(const char* file_path) throw (SelectorException);
+	void drop_correlated_markers() throw (SelectorException);
+	void write_remaining_markers() throw (SelectorException);
 
 public:
 	static const double EPSILON;
