@@ -33,4 +33,3 @@
 \keyword{misc}
 \keyword{utilities}
 \keyword{package}
-\examples{}
