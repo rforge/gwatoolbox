@@ -44,7 +44,8 @@
 
 class Analyzer {
 private:
-	TextReader reader;
+//	TextReader reader;
+	Reader* reader;
 	GwaFile* gwafile;
 
 	vector<Meta*> metas;

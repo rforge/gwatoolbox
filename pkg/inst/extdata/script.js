@@ -53,3 +53,25 @@ function assign()
 		}
 	}    
 }
+
+function minmax(element) {
+	if (element.innerHTML == "+") {
+		element.innerHTML = "-";
+		div = element.nextSibling;	
+		while (div != null) {
+			if (div.nodeType == 1) {
+				div.style.display = "block";
+			}
+			div = div.nextSibling;
+		}
+	} else if (element.innerHTML == "-") {
+		element.innerHTML = "+";	
+		div = element.nextSibling;	
+		while (div != null) {
+			if (div.nodeType == 1) {
+				div.style.display = "none";
+			}
+			div = div.nextSibling;
+		}
+	}		
+}
