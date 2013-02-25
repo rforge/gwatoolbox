@@ -120,7 +120,7 @@ bool TextReader::eof() {
 }
 
 bool TextReader::sof() {
-	return ifile_stream.tellg() == 0;
+	return ifile_stream.tellg() == std::ifstream::pos_type(0);
 }
 
 bool TextReader::is_open() {

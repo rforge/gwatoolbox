@@ -111,11 +111,11 @@ SEXP process_script(SEXP script_name, SEXP path_separator) {
 	PROTECT(descriptors_list = allocVector(VECSXP, descriptors->size()));
 
 	for (unsigned int i = 0; i < descriptors->size(); i++) {
-		external_descriptor_pointer = R_MakeExternalPtr((void*)descriptors->at(i), R_NilValue, R_NilValue);
+		PROTECT(external_descriptor_pointer = R_MakeExternalPtr((void*)descriptors->at(i), R_NilValue, R_NilValue));
 		SET_VECTOR_ELT(descriptors_list, i, external_descriptor_pointer);
 	}
 
-	UNPROTECT(1);
+	UNPROTECT(1 + descriptors->size());
 
 	return descriptors_list;
 }
