@@ -9,6 +9,7 @@
 
 \title{GWAtoolbox \\An R package for the fast processing of data from Genome-Wide Association Studies}
 \author{Christian Fuchsberger \and Daniel Taliun \and Cristian Pattaro}
+\date{28-02-2013}
 
 % \VignetteIndexEntry{GWAtoolbox}
 
@@ -50,7 +51,7 @@ The function \emph{gwasqc()} is capable to process a high number of GWAS data fi
 
 \section{Installation}
 The \emph{GWAtoolbox} package can be downloaded from \url{http://www.eurac.edu/GWAtoolbox.html}.
-It requires R version 2.13.1 or higher. The installation procedure depends on the host operating system and user privileges. In the following, detailed installation instructions for a wide range of settings are provided.
+It requires R version 2.15.0 or higher. The installation procedure depends on the host operating system and user privileges. In the following, detailed installation instructions for a wide range of settings are provided.
 
 \subsection{Windows}
 

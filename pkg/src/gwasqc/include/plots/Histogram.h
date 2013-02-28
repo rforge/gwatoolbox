@@ -27,6 +27,7 @@
 #include "PlotException.h"
 
 #include "R.h"
+#include "Rmath.h"
 #include "Rinternals.h"
 
 extern "C" {
@@ -60,6 +61,8 @@ public:
 	int get_nclass();
 	void set_title(const char* title) throw (PlotException);
 	const char* get_title();
+
+//	double pretty0(double *lo, double *up, int *ndiv, int min_n, double shrink_sml, double high_u_fact[], int eps_correction, int return_bounds);
 
 	static Histogram* create(const char* name, double* sorted_data, int data_size, int nclass) throw (PlotException);
 
