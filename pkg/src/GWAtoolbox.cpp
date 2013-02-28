@@ -554,7 +554,8 @@ SEXP Robj2Descriptor(SEXP descriptor_Robj) {
 		error("\n%s", e.what());
 	}
 
-	external_descriptor_pointer = R_MakeExternalPtr((void*)descriptor, R_NilValue, R_NilValue);
+	PROTECT(external_descriptor_pointer = R_MakeExternalPtr((void*)descriptor, R_NilValue, R_NilValue));
+	UNPROTECT(1);
 
 	return external_descriptor_pointer;
 }
