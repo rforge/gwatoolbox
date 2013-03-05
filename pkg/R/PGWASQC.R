@@ -85,7 +85,7 @@ pgwasqc <- function(script, processes) {
 	start_time <- proc.time()
 	
 	clusters <- makeCluster(rep("localhost", processes), type="PSOCK")
-	gwatoolbox_package_path <- dirname(.path.package("GWAtoolbox"))
+	gwatoolbox_package_path <- dirname(path.package("GWAtoolbox"))
 	clusterExport(clusters, "gwatoolbox_package_path", envir=environment())
 	clusterEvalQ(clusters, .libPaths(union(gwatoolbox_package_path, .libPaths())))
 	clusterEvalQ(clusters, library(GWAtoolbox))
@@ -97,7 +97,7 @@ pgwasqc <- function(script, processes) {
 	start_time <- proc.time()
 	
 	cluster_result <- clusterApply(clusters, descriptors_robj, function(x) {
-		resource_path <- paste(.path.package("GWAtoolbox"), "extdata/", sep="/")
+		resource_path <- paste(path.package("GWAtoolbox"), "extdata/", sep="/")
 		local_descriptor <- .Call("Robj2Descriptor", x)
 		plots <- .Call("perform_quality_check", local_descriptor, resource_path)
 		.Call("delete_descriptor", local_descriptor)
@@ -118,7 +118,7 @@ pgwasqc <- function(script, processes) {
 	cat("Combining results... ")
 	start_time <- proc.time()
 	
-	resource_path <- paste(.path.package("GWAtoolbox"), "extdata/", sep="/")
+	resource_path <- paste(path.package("GWAtoolbox"), "extdata/", sep="/")
 	html_reports <- matrix(data=character(0), nrow=length(cluster_result), ncol=2)
 	combined_boxplots <- vector()
 	for (i in seq(1, length(cluster_result), 1)) {

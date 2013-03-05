@@ -98,7 +98,7 @@ pgwasformat <- function(script, logfile, processes) {
 	start_time <- proc.time()
 	
 	clusters <- makeCluster(rep("localhost", processes), type="PSOCK")
-	gwatoolbox_package_path <- dirname(.path.package("GWAtoolbox"))
+	gwatoolbox_package_path <- dirname(path.package("GWAtoolbox"))
 	clusterExport(clusters, "gwatoolbox_package_path", envir=environment())
 	clusterEvalQ(clusters, .libPaths(union(gwatoolbox_package_path, .libPaths())))
 	clusterEvalQ(clusters, library(GWAtoolbox))
