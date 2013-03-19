@@ -259,10 +259,13 @@ double Formatter::calculate_lambda(int& n_total, int& n_filtered) throw (Formatt
 					token = auxiliary::strtok(&line, data_separator);
 					while (token != NULL) {
 						if (column_position == pvalue_column_pos) {
+							auxiliary::trim(&token);
 							pvalue_token = token;
 						} else if (column_position == maf_column_pos) {
+							auxiliary::trim(&token);
 							maf_token = token;
 						} else if (column_position == oevar_imp_column_pos) {
+							auxiliary::trim(&token);
 							oevar_imp_token = token;
 						}
 
@@ -334,8 +337,10 @@ double Formatter::calculate_lambda(int& n_total, int& n_filtered) throw (Formatt
 					token = auxiliary::strtok(&line, data_separator);
 					while (token != NULL) {
 						if (column_position == pvalue_column_pos) {
+							auxiliary::trim(&token);
 							pvalue_token = token;
 						} else if (column_position == maf_column_pos) {
+							auxiliary::trim(&token);
 							maf_token = token;
 						}
 
@@ -396,8 +401,10 @@ double Formatter::calculate_lambda(int& n_total, int& n_filtered) throw (Formatt
 				token = auxiliary::strtok(&line, data_separator);
 				while (token != NULL) {
 					if (column_position == pvalue_column_pos) {
+						auxiliary::trim(&token);
 						pvalue_token = token;
 					} else if (column_position == oevar_imp_column_pos) {
+						auxiliary::trim(&token);
 						oevar_imp_token = token;
 					}
 
@@ -454,6 +461,7 @@ double Formatter::calculate_lambda(int& n_total, int& n_filtered) throw (Formatt
 				token = auxiliary::strtok(&line, data_separator);
 				while (token != NULL) {
 					if (column_position == pvalue_column_pos) {
+						auxiliary::trim(&token);
 						pvalue_token = token;
 						break;
 					}
@@ -537,6 +545,7 @@ void Formatter::format(double lambda, char new_separator, int& n_total, int& n_f
 	char* line = NULL;
 	int line_length = 0;
 	unsigned int line_number = 2;
+	char* token = NULL;
 	char data_separator = '\0';
 
 	const char* output_prefix = NULL;
@@ -642,7 +651,12 @@ void Formatter::format(double lambda, char new_separator, int& n_total, int& n_f
 					while ((line_length = reader.read_line()) > 0) {
 						line = *reader.line;
 
-						for (columns_it = input_columns.begin(); columns_it != input_columns.end(); (*columns_it)->char_value = auxiliary::strtok(&line, data_separator), columns_it++);
+//						for (columns_it = input_columns.begin(); columns_it != input_columns.end(); (*columns_it)->char_value = auxiliary::strtok(&line, data_separator), columns_it++);
+						for (columns_it = input_columns.begin(); columns_it != input_columns.end(); ++columns_it) {
+							token = auxiliary::strtok(&line, data_separator);
+							auxiliary::trim(&token);
+							(*columns_it)->char_value = token;
+						}
 
 						d_value = maf_column->get_numeric_value();
 						d_value = d_value > 0.5 ? 1.0 - d_value : d_value;
@@ -670,7 +684,12 @@ void Formatter::format(double lambda, char new_separator, int& n_total, int& n_f
 					while ((line_length = reader.read_line()) > 0) {
 						line = *reader.line;
 
-						for (columns_it = input_columns.begin(); columns_it != input_columns.end(); (*columns_it)->char_value = auxiliary::strtok(&line, data_separator), columns_it++);
+//						for (columns_it = input_columns.begin(); columns_it != input_columns.end(); (*columns_it)->char_value = auxiliary::strtok(&line, data_separator), columns_it++);
+						for (columns_it = input_columns.begin(); columns_it != input_columns.end(); ++columns_it) {
+							token = auxiliary::strtok(&line, data_separator);
+							auxiliary::trim(&token);
+							(*columns_it)->char_value = token;
+						}
 
 						d_value = maf_column->get_numeric_value();
 						d_value = d_value > 0.5 ? 1.0 - d_value : d_value;
@@ -696,7 +715,12 @@ void Formatter::format(double lambda, char new_separator, int& n_total, int& n_f
 				while ((line_length = reader.read_line()) > 0) {
 					line = *reader.line;
 
-					for (columns_it = input_columns.begin(); columns_it != input_columns.end(); (*columns_it)->char_value = auxiliary::strtok(&line, data_separator), columns_it++);
+//					for (columns_it = input_columns.begin(); columns_it != input_columns.end(); (*columns_it)->char_value = auxiliary::strtok(&line, data_separator), columns_it++);
+					for (columns_it = input_columns.begin(); columns_it != input_columns.end(); ++columns_it) {
+						token = auxiliary::strtok(&line, data_separator);
+						auxiliary::trim(&token);
+						(*columns_it)->char_value = token;
+					}
 
 					d_value = oevar_imp_column->get_numeric_value();
 					if (auxiliary::fcmp(d_value, oevar_imp_filter_value, EPSILON) == 1) {
@@ -720,7 +744,12 @@ void Formatter::format(double lambda, char new_separator, int& n_total, int& n_f
 				while ((line_length = reader.read_line()) > 0) {
 					line = *reader.line;
 
-					for (columns_it = input_columns.begin(); columns_it != input_columns.end(); (*columns_it)->char_value = auxiliary::strtok(&line, data_separator), columns_it++);
+//					for (columns_it = input_columns.begin(); columns_it != input_columns.end(); (*columns_it)->char_value = auxiliary::strtok(&line, data_separator), columns_it++);
+					for (columns_it = input_columns.begin(); columns_it != input_columns.end(); ++columns_it) {
+						token = auxiliary::strtok(&line, data_separator);
+						auxiliary::trim(&token);
+						(*columns_it)->char_value = token;
+					}
 
 					columns_it = output_columns.begin();
 					if (columns_it != output_columns.end()) {

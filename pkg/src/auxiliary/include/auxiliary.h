@@ -172,6 +172,30 @@ namespace auxiliary {
 		string[j - i] = '\0';
 	}
 
+	inline void trim(char** string) {
+		int j = strlen(*string) - 1;
+
+		while ((j >= 0) && (((*string)[j] == ' ') || ((*string)[j] == '\t'))) {
+			--j;
+		}
+		(*string)[j + 1] = '\0';
+
+		while ((**string == ' ') || (**string == '\t')) {
+			++(*string);
+		}
+	}
+
+	inline bool is_not_blank(const char* string) {
+		while (*string != '\0') {
+			if ((*string != ' ') && (*string != '\t')) {
+				return true;
+			}
+			++string;
+		}
+
+		return false;
+	}
+
 	inline unsigned long int to_ulong_int(const char* value, unsigned long int* ulong_int) {
 		if ((value != NULL) && (strlen(value) <= 0)) {
 			return false;

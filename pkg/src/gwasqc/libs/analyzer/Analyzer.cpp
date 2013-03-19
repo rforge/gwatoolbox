@@ -462,6 +462,7 @@ void Analyzer::process_data() throw (AnalyzerException) {
 			line = *(reader->line);
 			while ((token = auxiliary::strtok(&line, data_separator)) != NULL) {
 				if ((meta = metas.at(column_number)) != NULL) {
+					auxiliary::trim(&token);
 					meta->put(token);
 				}
 				column_number += 1;
