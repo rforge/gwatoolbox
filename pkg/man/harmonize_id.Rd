@@ -11,13 +11,13 @@
 		Name of an output file.
 	}
 	\item{map}{
-		Name of the file with ID mapping table.
+		Name of the VCF file with ID mapping table.
 	}
 	\item{id}{
-		Name of the column containing SNP identifiers.
+		Name of the column containing SNP identifiers in the specified input file.
 	}
 	\item{alleles}{
-		Vector with column names containing reference and non-reference alleles.
+		Vector with column names containing reference and non-reference alleles in the specified input file.
 	}
 	\item{sep}{
 		The field separator character in the specified input file.
