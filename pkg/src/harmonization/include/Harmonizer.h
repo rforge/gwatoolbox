@@ -21,6 +21,7 @@
 #define HARMONIZER_H_
 
 #include <cstdio>
+#include <map>
 
 #include "HarmonizerException.h"
 #include "../../reader/include/ReaderFactory.h"
@@ -42,59 +43,98 @@ private:
 	static const char* VCF_FORMAT;
 	static const int VCF_MANDATORY_COLUMNS_SIZE;
 	static const char* vcf_mandatory_columns[];
+	static const char* VCF_PASS;
+	static const char* VCF_MISSING;
 	static const char VCF_INFO_FIELD_SEPARATOR;
 	static const char* VCF_VARIANT_TYPE;
 	static const char* VCF_SNP_TYPE;
 	static const char* VCF_INDEL_TYPE_01;
 	static const char* VCF_INDEL_TYPE_02;
+	static const char* VCF_ALT_ALLELE_DEL;
+	static const char* VCF_ALT_ALLELE_INS;
 
 	char* map_file;
 	Reader* map_reader;
 	unsigned int map_file_line_number;
 	int map_file_column_number;
 
-	char* file;
+	char* input_file;
+	char* output_file;
+	char* log_file;
+
 	Reader* reader;
+	Writer* writer;
+	Writer* log_writer;
+
+	char** tokens;
+
+	char* chr_column;
 	char* id_column;
 	char* ref_allele_column;
 	char* nonref_allele_column;
 	char separator;
 	char* header_backup;
 	int file_column_number;
+	int chr_column_pos;
 	int id_column_pos;
 	int ref_allele_column_pos;
 	int nonref_allele_column_pos;
 
-	struct map_index_entry {
+	struct position_index_entry {
 		unsigned long int position;
-		char* chromosome;
 		char* id;
 		char type;
+		char* ref_allele;
+		char* nonref_allele;
 	};
 
 	struct id_index_entry {
-		char* id;
+		const char* id;
+		char type;
 		unsigned int location;
 	};
 
-	map_index_entry* map_index;
-	id_index_entry* id_index;
+	struct chr_index {
+		position_index_entry* positions;
+		id_index_entry* ids;
+		unsigned int n;
+		unsigned int heap_n;
 
-	unsigned int index_size;
-	unsigned int current_index_heap_size;
+		~chr_index() {
+			for (unsigned int i = 0u; i < n; ++i) {
+				free(positions[i].id);
+				positions[i].id = NULL;
+				if (positions[i].ref_allele != NULL) {
+					free(positions[i].ref_allele);
+					positions[i].ref_allele = NULL;
+				}
+				if (positions[i].nonref_allele != NULL) {
+					free(positions[i].nonref_allele);
+					positions[i].nonref_allele = NULL;
+				}
+				ids[i].id = NULL;
+			}
 
-	static int qsort_map_index_entry_cmp(const void* first, const void* second);
+			free(positions);
+			free(ids);
+
+			positions = NULL;
+			ids = NULL;
+		}
+	};
+
+	map<char*, chr_index*, bool(*)(const char*, const char*)> map_index_by_chr;
+	map<char*, chr_index*, bool(*)(const char*, const char*)>::iterator map_index_by_chr_it;
+
+	static int qsort_position_index_entry_cmp(const void* first, const void* second);
 	static int qsort_id_index_entry_cmp(const void* first, const void* second);
+
+	inline void write_columns() throw (WriterException);
 
 	void open_map_file(const char* file_name) throw (HarmonizerException);
 	void close_map_file() throw (HarmonizerException);
 	void process_map_file_header() throw (HarmonizerException);
 	void process_map_file_data() throw (HarmonizerException);
-
-	void harmonize_id_with_alleles();
-
-	void harmonize_without_alleles(const char* output_file_name, bool gzip) throw (HarmonizerException);
-	void harmonize_with_alleles(const char* output_file_name, bool drop, bool gzip) throw (HarmonizerException);
 
 public:
 	static const unsigned int MAP_HEAP_SIZE;
@@ -103,12 +143,18 @@ public:
 	Harmonizer();
 	virtual ~Harmonizer();
 
-	void open_file(const char* file_name, const char* id_column_name, const char* ref_allele_column_name, const char* nonref_allele_column_name, char field_separator) throw (HarmonizerException);
-	void close_file() throw (HarmonizerException);
+	void open_input_file(const char* file_name, const char* chr_column_name, const char* id_column_name, const char* ref_allele_column_name, const char* nonref_allele_column_name, char field_separator) throw (HarmonizerException);
+	void open_output_file(const char* file_name, bool gzip) throw (HarmonizerException);
+	void open_log_file(const char* file_name, bool gzip) throw (HarmonizerException);
+
+	void close_input_file() throw (HarmonizerException);
+	void close_output_file() throw (HarmonizerException);
+	void close_log_file() throw (HarmonizerException);
 
 	void process_header() throw (HarmonizerException);
 	void index_map(const char* file_name) throw (HarmonizerException);
-	void harmonize(const char* output_file_name, bool drop, bool gzip) throw (HarmonizerException);
+	void harmonize(bool drop) throw (HarmonizerException);
+	void harmonize_no_vcf_allele_check(bool drop) throw (HarmonizerException);
 };
 
 #endif

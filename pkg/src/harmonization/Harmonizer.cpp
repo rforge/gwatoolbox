@@ -34,20 +34,26 @@ const int Harmonizer::VCF_MANDATORY_COLUMNS_SIZE = 9;
 const char* Harmonizer::vcf_mandatory_columns[VCF_MANDATORY_COLUMNS_SIZE] = {
 		VCF_CHROM, VCF_POS, VCF_ID, VCF_REF, VCF_ALT, VCF_QUAL, VCF_FILTER, VCF_INFO, VCF_FORMAT
 };
+const char* Harmonizer::VCF_PASS = "PASS";
+const char* Harmonizer::VCF_MISSING = ".";
 const char Harmonizer::VCF_INFO_FIELD_SEPARATOR = ';';
 const char* Harmonizer::VCF_VARIANT_TYPE = "VT";
 const char* Harmonizer::VCF_SNP_TYPE = "SNP";
 const char* Harmonizer::VCF_INDEL_TYPE_01 = "INDEL";
 const char* Harmonizer::VCF_INDEL_TYPE_02 = "I";
+const char* Harmonizer::VCF_ALT_ALLELE_DEL = "<DEL>";
+const char* Harmonizer::VCF_ALT_ALLELE_INS = "<INS>";
 
 const unsigned int Harmonizer::MAP_HEAP_SIZE = 3000000;
 const unsigned int Harmonizer::MAP_HEAP_INCREMENT = 1000000;
 
 Harmonizer::Harmonizer() : map_file(NULL), map_reader(NULL), map_file_line_number(0u), map_file_column_number(0),
-		file(NULL), reader(NULL), id_column(NULL), ref_allele_column(NULL), nonref_allele_column(NULL),
+		input_file(NULL), output_file(NULL), log_file(NULL), reader(NULL), writer(NULL), log_writer(NULL), tokens(NULL),
+		chr_column(NULL), id_column(NULL), ref_allele_column(NULL), nonref_allele_column(NULL),
 		separator('\0'), header_backup(NULL), file_column_number(0),
-		id_column_pos(numeric_limits<int>::min()), ref_allele_column_pos(numeric_limits<int>::min()), nonref_allele_column_pos(numeric_limits<int>::min()),
-		map_index(NULL), id_index(NULL), index_size(0u), current_index_heap_size(0u) {
+		chr_column_pos(numeric_limits<int>::min()), id_column_pos(numeric_limits<int>::min()),
+		ref_allele_column_pos(numeric_limits<int>::min()), nonref_allele_column_pos(numeric_limits<int>::min()),
+		map_index_by_chr(auxiliary::bool_strcmp_ignore_case) {
 
 }
 
@@ -62,14 +68,44 @@ Harmonizer::~Harmonizer() {
 		map_reader = NULL;
 	}
 
-	if (file != NULL) {
-		free(file);
-		file = NULL;
+	if (input_file != NULL) {
+		free(input_file);
+		input_file = NULL;
+	}
+
+	if (output_file != NULL) {
+		free(output_file);
+		output_file = NULL;
+	}
+
+	if (log_file != NULL) {
+		free(log_file);
+		log_file = NULL;
 	}
 
 	if (reader != NULL) {
 		delete reader;
 		reader = NULL;
+	}
+
+	if (writer != NULL) {
+		delete writer;
+		writer = NULL;
+	}
+
+	if (log_writer != NULL) {
+		delete log_writer;
+		log_writer = NULL;
+	}
+
+	if (tokens != NULL) {
+		delete tokens;
+		tokens = NULL;
+	}
+
+	if (chr_column != NULL) {
+		free(chr_column);
+		chr_column = NULL;
 	}
 
 	if (id_column != NULL) {
@@ -92,26 +128,9 @@ Harmonizer::~Harmonizer() {
 		header_backup = NULL;
 	}
 
-	if (map_index != NULL) {
-		for (unsigned int i = 0u; i < index_size; ++i) {
-			free(map_index[i].chromosome);
-			map_index[i].chromosome = NULL;
-
-			free(map_index[i].id);
-			map_index[i].id = NULL;
-		}
-
-		free(map_index);
-		map_index = NULL;
-	}
-
-	if (id_index != NULL) {
-		for (unsigned int i = 0u; i < index_size; ++i) {
-			id_index[i].id = NULL;
-		}
-
-		free(id_index);
-		id_index = NULL;
+	for (map_index_by_chr_it = map_index_by_chr.begin(); map_index_by_chr_it != map_index_by_chr.end(); ++map_index_by_chr_it) {
+		free(map_index_by_chr_it->first);
+		delete map_index_by_chr_it->second;
 	}
 }
 
@@ -228,6 +247,31 @@ void Harmonizer::process_map_file_header() throw (HarmonizerException) {
 					break;
 				} else {
 					/* process meta-info line if necessary */
+
+//					if (auxiliary::strcmp_ignore_case(line, "##ALT", 5) == 0) {
+//						token = strstr(line, "ID");
+//						if (token == NULL) {
+//							continue;
+//						}
+//
+//						if (strpbrk(token, ",>") != NULL) {
+//							strpbrk(token, ",>")[0u] = '\0';
+//						}
+//
+//						token = strchr(token, '=');
+//						if (token == NULL) {
+//							continue;
+//						}
+//
+//						++token;
+//
+//						auxiliary::trim(&token);
+//						if (strlen(token) <= 0) {
+//							continue;
+//						}
+//
+//						/* the token contains variant type name */
+//					}
 				}
 			} else {
 				throw HarmonizerException("Harmonizer", "process_map_file_header()", __LINE__, 12, map_file_line_number);
@@ -251,28 +295,27 @@ void Harmonizer::process_map_file_data() throw (HarmonizerException) {
 	int column_number = 0;
 
 	char* token = NULL;
-	char** tokens = NULL;
 
 	if ((map_file == NULL) || (map_reader == NULL)) {
 		return;
 	}
 
-	map_index_entry* map_index_new = NULL;
+	chr_index* index = NULL;
+	position_index_entry* positions_new = NULL;
 
 	char* chromosome = NULL;
 	char* id = NULL;
 	unsigned long int position = NULL;
 	char type = '\0';
+	char* ref_allele = NULL;
+	unsigned int ref_allele_length = 0u;
+	char* nonref_allele = NULL;
+	unsigned int nonref_allele_length = 0u;
 
+	bool vt_found = false;
 	int vt_length = strlen(VCF_VARIANT_TYPE);
 
 	try {
-		current_index_heap_size = MAP_HEAP_SIZE;
-		map_index = (map_index_entry*)malloc(current_index_heap_size * sizeof(map_index_entry));
-		if (map_index == NULL) {
-			throw HarmonizerException("Harmonizer", "process_map_file_data()", __LINE__, 2, MAP_HEAP_SIZE * sizeof(map_index_entry));
-		}
-
 		/* Read data. */
 		tokens = (char**)malloc(VCF_MANDATORY_COLUMNS_SIZE * sizeof(char*));
 		if (tokens == NULL) {
@@ -297,24 +340,66 @@ void Harmonizer::process_map_file_data() throw (HarmonizerException) {
 				throw HarmonizerException("Harmonizer", "process_map_file_data()", __LINE__, 15, map_file_line_number, map_file, column_number, map_file_column_number);
 			}
 
-			chromosome = (char*)malloc((strlen(tokens[0u]) + 1u) * sizeof(char));
-			if (chromosome == NULL) {
-				throw HarmonizerException("Harmonizer", "process_map_file_data()", __LINE__, 2, (strlen(tokens[0u]) + 1u) * sizeof(char));
+			/* tokens[6] -- filter field. check if all filteres are passed. Must contain "PASS" or "." (if no filters were applied). */
+			if ((auxiliary::strcmp_ignore_case(tokens[6u], VCF_PASS) != 0) && (auxiliary::strcmp_ignore_case(tokens[6u], VCF_MISSING) != 0)) {
+				continue;
 			}
-			strcpy(chromosome, tokens[0u]);
 
+			/* tokens[3] -- ref allele; tokens[4] --check nonref allele. check if polymorphic SNP or small insertion/deletion. */
+			ref_allele = tokens[3u];
+			ref_allele_length = strlen(ref_allele);
+			if ((ref_allele_length <= 0u) || (strspn(ref_allele, "ACGT") != ref_allele_length)) {
+				continue;
+			}
+
+			nonref_allele = tokens[4u];
+			nonref_allele_length = strlen(nonref_allele);
+			if (((nonref_allele_length <= 0u) || (strspn(nonref_allele, "ACGT") != nonref_allele_length)) &&
+					(auxiliary::strcmp_ignore_case(nonref_allele, VCF_ALT_ALLELE_DEL) != 0) &&
+					(auxiliary::strcmp_ignore_case(nonref_allele, VCF_ALT_ALLELE_INS) != 0)) {
+				continue;
+			}
+
+			/* tokens[0] -- chromosome. */
+			map_index_by_chr_it = map_index_by_chr.find(tokens[0u]);
+			if (map_index_by_chr_it != map_index_by_chr.end()) {
+				index = map_index_by_chr_it->second;
+			} else {
+				chromosome = (char*)malloc((strlen(tokens[0u]) + 1u) * sizeof(char));
+				if (chromosome == NULL) {
+					throw HarmonizerException("Harmonizer", "process_map_file_data()", __LINE__, 2, (strlen(tokens[0u]) + 1u) * sizeof(char));
+				}
+				strcpy(chromosome, tokens[0u]);
+
+				index = new chr_index();
+
+				index->n = 0u;
+				index->heap_n = MAP_HEAP_SIZE;
+				index->positions = (position_index_entry*)malloc(index->heap_n * sizeof(position_index_entry));
+				if (index->positions == NULL) {
+					throw HarmonizerException("Harmonizer", "process_map_file_data()", __LINE__, 2, index->heap_n * sizeof(position_index_entry));
+				}
+				index->ids = NULL;
+
+				map_index_by_chr.insert(pair<char*, chr_index*>(chromosome, index));
+			}
+
+			/* tokens[1] -- position. */
 			if (!auxiliary::to_ulong_int(tokens[1u], &position)) {
 				throw HarmonizerException("Harmonizer", "process_map_file_data()", __LINE__, 20, tokens[1u], map_file_line_number, map_file);
 			}
 
+			/* tokens[2] -- identifier. */
 			id = (char*)malloc((strlen(tokens[2u]) + 1u) * sizeof(char));
 			if (id == NULL) {
 				throw HarmonizerException("Harmonizer", "process_map_file_data()", __LINE__, 2, (strlen(tokens[2u]) + 1u) * sizeof(char));
 			}
 			strcpy(id, tokens[2u]);
 
+			/* BEGIN: determine variant type (only I(indel) and S(snp) are supported) */
 			type = 'I';
 
+			/* tokens[7] -- info field that may contain variant type. */
 			while ((token = auxiliary::strtok(&(tokens[7u]), VCF_INFO_FIELD_SEPARATOR)) != NULL) {
 				auxiliary::trim_start(token);
 				if (auxiliary::strcmp_ignore_case(token, VCF_VARIANT_TYPE, vt_length) == 0) {
@@ -329,27 +414,54 @@ void Harmonizer::process_map_file_data() throw (HarmonizerException) {
 							type = 'S';
 						}
 					}
+					vt_found = true;
 					break;
 				}
 			}
 
-			if (index_size >= current_index_heap_size) {
-				current_index_heap_size += MAP_HEAP_INCREMENT;
-
-				map_index_new = (map_index_entry*)realloc(map_index, current_index_heap_size * sizeof(map_index_entry));
-				if (map_index_new == NULL) {
-					throw HarmonizerException("Harmonizer", "process_map_file_data()", __LINE__, 19, current_index_heap_size * sizeof(map_index_entry));
+			/* if info field doesn't contain variant type, then determine it from alleles. */
+			if (!vt_found) {
+				if ((ref_allele_length == 1u) && (nonref_allele_length == 1u)) {
+					type = 'S';
 				}
-				map_index = map_index_new;
-				map_index_new = NULL;
+			} else {
+				vt_found = false;
 			}
 
-			map_index[index_size].chromosome = chromosome;
-			map_index[index_size].position = position;
-			map_index[index_size].id = id;
-			map_index[index_size].type = type;
+			/* in all other cases it is I (indel) */
+			/* END: determine variant type (only I and S are supported) */
 
-			++index_size;
+			if (index->n >= index->heap_n) {
+				index->heap_n += MAP_HEAP_INCREMENT;
+				positions_new = (position_index_entry*)realloc(index->positions, index->heap_n * sizeof(position_index_entry));
+				if (positions_new == NULL) {
+					throw HarmonizerException("Harmonizer", "process_map_file_data()", __LINE__, 19, index->heap_n * sizeof(position_index_entry));
+				}
+				index->positions = positions_new;
+				positions_new = NULL;
+			}
+
+			index->positions[index->n].position = position;
+			index->positions[index->n].id = id;
+			index->positions[index->n].type = type;
+			if (type == 'I') {
+				index->positions[index->n].ref_allele = (char*)malloc((ref_allele_length + 1u) * sizeof(char));
+				if (index->positions[index->n].ref_allele == NULL) {
+					throw HarmonizerException("Harmonizer", "process_map_file_data()", __LINE__, 2, ((ref_allele_length + 1u) * sizeof(char)));
+				}
+				strcpy(index->positions[index->n].ref_allele, ref_allele);
+
+				index->positions[index->n].nonref_allele = (char*)malloc((nonref_allele_length + 1u) * sizeof(char));
+				if (index->positions[index->n].nonref_allele == NULL) {
+					throw HarmonizerException("Harmonizer", "process_map_file_data()", __LINE__, 2, ((nonref_allele_length + 1u) * sizeof(char)));
+				}
+				strcpy(index->positions[index->n].nonref_allele, nonref_allele);
+			} else {
+				index->positions[index->n].ref_allele = NULL;
+				index->positions[index->n].nonref_allele = NULL;
+			}
+
+			++(index->n);
 		}
 
 		if (line_length == 0) {
@@ -359,19 +471,26 @@ void Harmonizer::process_map_file_data() throw (HarmonizerException) {
 		free(tokens);
 		tokens = NULL;
 
-		qsort(map_index, index_size, sizeof(map_index_entry), qsort_map_index_entry_cmp);
+		map_index_by_chr_it = map_index_by_chr.begin();
+		while (map_index_by_chr_it != map_index_by_chr.end()) {
+			index = map_index_by_chr_it->second;
 
-		id_index = (id_index_entry*)malloc(index_size * sizeof(id_index_entry));
-		if (id_index == NULL) {
-			throw HarmonizerException("Harmonizer", "process_map_file_data()", __LINE__, 2, index_size * sizeof(id_index_entry));
+			qsort(index->positions, index->n, sizeof(position_index_entry), qsort_position_index_entry_cmp);
+
+			index->ids = (id_index_entry*)malloc(index->n * sizeof(id_index_entry));
+			if (index->ids == NULL) {
+				throw HarmonizerException("Harmonizer", "process_map_file_data()", __LINE__, 2, index->n * sizeof(id_index_entry));
+			}
+
+			for (unsigned int i = 0u; i < index->n; ++i) {
+				index->ids[i].id = index->positions[i].id;
+				index->ids[i].location = i;
+			}
+
+			qsort(index->ids, index->n, sizeof(id_index_entry), qsort_id_index_entry_cmp);
+
+			++map_index_by_chr_it;
 		}
-
-		for (unsigned int i = 0u; i < index_size; ++i) {
-			id_index[i].id = map_index[i].id;
-			id_index[i].location = i;
-		}
-
-		qsort(id_index, index_size, sizeof(id_index_entry), qsort_id_index_entry_cmp);
 	} catch (ReaderException &e) {
 		HarmonizerException new_e(e);
 		new_e.add_message("Harmonizer", "process_map_file_data()", __LINE__, 5, (map_file != NULL) ? map_file : "NULL");
@@ -389,30 +508,10 @@ void Harmonizer::index_map(const char* file_name) throw (HarmonizerException) {
 			throw HarmonizerException("Harmonizer", "index_map( const char* )", __LINE__, 1, "file_name");
 		}
 
-		if (map_index != NULL) {
-			for (unsigned int i = 0u; i < index_size; ++i) {
-				free(map_index[i].chromosome);
-				map_index[i].chromosome = NULL;
-
-				free(map_index[i].id);
-				map_index[i].id = NULL;
-			}
-
-			free(map_index);
-			map_index = NULL;
+		for (map_index_by_chr_it = map_index_by_chr.begin(); map_index_by_chr_it != map_index_by_chr.end(); ++map_index_by_chr_it) {
+			free(map_index_by_chr_it->first);
+			delete map_index_by_chr_it->second;
 		}
-
-		if (id_index != NULL) {
-			for (unsigned int i = 0u; i < index_size; ++i) {
-				id_index[i].id = NULL;
-			}
-
-			free(id_index);
-			id_index = NULL;
-		}
-
-		index_size = 0u;
-		current_index_heap_size = 0u;
 
 		open_map_file(file_name);
 		process_map_file_header();
@@ -424,78 +523,168 @@ void Harmonizer::index_map(const char* file_name) throw (HarmonizerException) {
 	}
 }
 
-void Harmonizer::open_file(const char* file_name, const char* id_column_name, const char* ref_allele_column_name, const char* nonref_allele_column_name, char field_separator) throw (HarmonizerException) {
+void Harmonizer::open_input_file(const char* file_name, const char* chr_column_name, const char* id_column_name, const char* ref_allele_column_name, const char* nonref_allele_column_name, char field_separator) throw (HarmonizerException) {
 	try {
-		if ((file != NULL) || (reader != NULL)) {
-			close_file();
+		if ((input_file != NULL) || (reader != NULL)) {
+			close_input_file();
 		}
 
 		if (file_name == NULL) {
-			throw HarmonizerException("Harmonizer", "open_file( const char*, const char*, const char*, const char*, char )", __LINE__, 0, "file_name");
+			throw HarmonizerException("Harmonizer", "open_input_file( const char*, const char*, const char*, const char*, const char*, char )", __LINE__, 0, "file_name");
 		}
 
 		if (strlen(file_name) <= 0) {
-			throw HarmonizerException("Harmonizer", "open_file( const char*, const char*, const char*, const char*, char )", __LINE__, 1, "file_name");
+			throw HarmonizerException("Harmonizer", "open_input_file( const char*, const char*, const char*, const char*, const char*, char )", __LINE__, 1, "file_name");
 		}
 
-		file = (char*)malloc((strlen(file_name) + 1u) * sizeof(char));
-		if (file == NULL) {
-			throw HarmonizerException("Harmonizer", "open_file( const char*, const char*, const char*, const char*, char )", __LINE__, 2, (strlen(file_name) + 1u) * sizeof(char));
+		input_file = (char*)malloc((strlen(file_name) + 1u) * sizeof(char));
+		if (input_file == NULL) {
+			throw HarmonizerException("Harmonizer", "open_input_file( const char*, const char*, const char*, const char*, const char*, char )", __LINE__, 2, (strlen(file_name) + 1u) * sizeof(char));
 		}
-		strcpy(file, file_name);
+		strcpy(input_file, file_name);
+
+		if (chr_column_name == NULL) {
+			throw HarmonizerException("Harmonizer", "open_input_file( const char*, const char*, const char*, const char*, const char*, char )", __LINE__, 0, "chr_column_name");
+		}
+
+		if (strlen(chr_column_name) <= 0) {
+			throw HarmonizerException("Harmonizer", "open_input_file( const char*, const char*, const char*, const char*, const char*, char )", __LINE__, 1, "chr_column_name");
+		}
+
+		chr_column = (char*)malloc((strlen(chr_column_name) + 1u) * sizeof(char));
+		if (chr_column == NULL) {
+			throw HarmonizerException("Harmonizer", "open_input_file( const char*, const char*, const char*, const char*, const char*, char )", __LINE__, 2, (strlen(chr_column_name) + 1u) * sizeof(char));
+		}
+		strcpy(chr_column, chr_column_name);
 
 		if (id_column_name == NULL) {
-			throw HarmonizerException("Harmonizer", "open_file( const char*, const char*, const char*, const char*, char )", __LINE__, 0, "id_column_name");
+			throw HarmonizerException("Harmonizer", "open_input_file( const char*, const char*, const char*, const char*, const char*, char )", __LINE__, 0, "id_column_name");
 		}
 
 		if (strlen(id_column_name) <= 0) {
-			throw HarmonizerException("Harmonizer", "open_file( const char*, const char*, const char*, const char*, char )", __LINE__, 1, "id_column_name");
+			throw HarmonizerException("Harmonizer", "open_input_file( const char*, const char*, const char*, const char*, const char*, char )", __LINE__, 1, "id_column_name");
 		}
 
 		id_column = (char*)malloc((strlen(id_column_name) + 1u) * sizeof(char));
 		if (id_column == NULL) {
-			throw HarmonizerException("Harmonizer", "open_file( const char*, const char*, const char*, const char*, char )", __LINE__, 2, (strlen(id_column_name) + 1u) * sizeof(char));
+			throw HarmonizerException("Harmonizer", "open_input_file( const char*, const char*, const char*, const char*, const char*, char )", __LINE__, 2, (strlen(id_column_name) + 1u) * sizeof(char));
 		}
 		strcpy(id_column, id_column_name);
 
-		if ((ref_allele_column_name != NULL) && (nonref_allele_column_name != NULL)) {
-			if (strlen(ref_allele_column_name) <= 0) {
-				throw HarmonizerException("Harmonizer", "open_file( const char*, const char*, const char*, const char*, char )", __LINE__, 1, "ref_allele_column_name");
-			}
-
-			if (strlen(nonref_allele_column_name) <= 0) {
-				throw HarmonizerException("Harmonizer", "open_file( const char*, const char*, const char*, const char*, char )", __LINE__, 1, "nonref_allele_column_name");
-			}
-
-			ref_allele_column = (char*)malloc((strlen(ref_allele_column_name) + 1u) * sizeof(char));
-			if (ref_allele_column == NULL) {
-				throw HarmonizerException("Harmonizer", "open_file( const char*, const char*, const char*, const char*, char )", __LINE__, 2, (strlen(ref_allele_column_name) + 1u) * sizeof(char));
-			}
-			strcpy(ref_allele_column, ref_allele_column_name);
-
-			nonref_allele_column = (char*)malloc((strlen(nonref_allele_column_name) + 1u) * sizeof(char));
-			if (nonref_allele_column == NULL) {
-				throw HarmonizerException("Harmonizer", "open_file( const char*, const char*, const char*, const char*, char )", __LINE__, 2, (strlen(nonref_allele_column_name) + 1u) * sizeof(char));
-			}
-			strcpy(nonref_allele_column, nonref_allele_column_name);
+		if (ref_allele_column_name == NULL) {
+			throw HarmonizerException("Harmonizer", "open_input_file( const char*, const char*, const char*, const char*, const char*, char )", __LINE__, 0, "ref_allele_column_name");
 		}
+
+		if (strlen(ref_allele_column_name) <= 0) {
+			throw HarmonizerException("Harmonizer", "open_input_file( const char*, const char*, const char*, const char*, const char*, char )", __LINE__, 1, "ref_allele_column_name");
+		}
+
+		ref_allele_column = (char*)malloc((strlen(ref_allele_column_name) + 1u) * sizeof(char));
+		if (ref_allele_column == NULL) {
+			throw HarmonizerException("Harmonizer", "open_input_file( const char*, const char*, const char*, const char*, const char*, char )", __LINE__, 2, (strlen(ref_allele_column_name) + 1u) * sizeof(char));
+		}
+		strcpy(ref_allele_column, ref_allele_column_name);
+
+		if (nonref_allele_column_name == NULL) {
+			throw HarmonizerException("Harmonizer", "open_input_file( const char*, const char*, const char*, const char*, const char*, char )", __LINE__, 0, "nonref_allele_column_name");
+		}
+
+		if (strlen(nonref_allele_column_name) <= 0) {
+			throw HarmonizerException("Harmonizer", "open_input_file( const char*, const char*, const char*, const char*, const char*, char )", __LINE__, 1, "nonref_allele_column_name");
+		}
+
+		nonref_allele_column = (char*)malloc((strlen(nonref_allele_column_name) + 1u) * sizeof(char));
+		if (nonref_allele_column == NULL) {
+			throw HarmonizerException("Harmonizer", "open_input_file( const char*, const char*, const char*, const char*, const char*, char )", __LINE__, 2, (strlen(nonref_allele_column_name) + 1u) * sizeof(char));
+		}
+		strcpy(nonref_allele_column, nonref_allele_column_name);
 
 		separator = field_separator;
 
-		reader = ReaderFactory::create(file);
-		reader->set_file_name(file);
+		reader = ReaderFactory::create(input_file);
+		reader->set_file_name(input_file);
 		reader->open();
 	} catch (ReaderException &e) {
 		HarmonizerException new_e(e);
-		new_e.add_message("Harmonizer", "open_file( const char*, const char*, char )", __LINE__, 3, (file != NULL) ? file : "NULL");
+		new_e.add_message("Harmonizer", "open_input_file( const char*, const char*, const char*, const char*, const char*, char )", __LINE__, 3, (input_file != NULL) ? input_file : "NULL");
 		throw new_e;
 	} catch (HarmonizerException &e) {
-		e.add_message("Harmonizer", "open_file( const char*, const char*, char )", __LINE__, 3, (file != NULL) ? file : "NULL");
+		e.add_message("Harmonizer", "open_input_file( const char*, const char*, const char*, const char*, const char*, char )", __LINE__, 3, (input_file != NULL) ? input_file : "NULL");
 		throw;
 	}
 }
 
-void Harmonizer::close_file() throw (HarmonizerException) {
+void Harmonizer::open_output_file(const char* file_name, bool gzip) throw (HarmonizerException) {
+	try {
+		if ((output_file != NULL) || (writer != NULL)) {
+			close_output_file();
+		}
+
+		if (file_name == NULL) {
+			throw HarmonizerException("Harmonizer", "open_output_file( const char*, bool )", __LINE__, 0, "file_name");
+		}
+
+		if (strlen(file_name) <= 0) {
+			throw HarmonizerException("Harmonizer", "open_output_file( const char*, bool )", __LINE__, 1, "file_name");
+		}
+
+		output_file = (char*)malloc((strlen(file_name) + 1u) * sizeof(char));
+		if (output_file == NULL) {
+			throw HarmonizerException("Harmonizer", "open_output_file( const char*, bool )", __LINE__, 2, (strlen(file_name) + 1u) * sizeof(char));
+		}
+		strcpy(output_file, file_name);
+
+		writer = WriterFactory::create(gzip ? WriterFactory::GZIP : WriterFactory::TEXT);
+		writer->set_file_name(output_file);
+		writer->open();
+	} catch (WriterException &e) {
+		HarmonizerException new_e(e);
+		new_e.add_message("Harmonizer", "open_output_file( const char*, bool )", __LINE__, 3, (output_file != NULL) ? output_file : "NULL");
+		throw new_e;
+	} catch (HarmonizerException &e) {
+		e.add_message("Harmonizer", "open_output_file( const char*, bool )", __LINE__, 3, (output_file != NULL) ? output_file : "NULL");
+		throw;
+	}
+}
+
+void Harmonizer::open_log_file(const char* file_name, bool gzip) throw (HarmonizerException) {
+	try {
+		if ((log_file != NULL) || (log_writer != NULL)) {
+			close_log_file();
+		}
+
+		if (file_name == NULL) {
+			throw HarmonizerException("Harmonizer", "open_log_file( const char*, bool )", __LINE__, 0, "file_name");
+		}
+
+		if (strlen(file_name) <= 0) {
+			throw HarmonizerException("Harmonizer", "open_log_file( const char*, bool )", __LINE__, 1, "file_name");
+		}
+
+		if (gzip) {
+			auxiliary::transform_file_name(&log_file, NULL, file_name, ".log.gz", true);
+		} else {
+			auxiliary::transform_file_name(&log_file, NULL, file_name, ".log", true);
+		}
+
+		if (log_file == NULL) {
+			throw HarmonizerException("Harmonizer", "open_log_file( const char*, bool )", __LINE__, 18);
+		}
+
+		log_writer = WriterFactory::create(gzip ? WriterFactory::GZIP : WriterFactory::TEXT);
+		log_writer->set_file_name(log_file);
+		log_writer->open();
+	} catch (WriterException &e) {
+		HarmonizerException new_e(e);
+		new_e.add_message("Harmonizer", "open_log_file( const char*, bool )", __LINE__, 3, (log_file != NULL) ? log_file : "NULL");
+		throw new_e;
+	} catch (HarmonizerException &e) {
+		e.add_message("Harmonizer", "open_log_file( const char*, bool )", __LINE__, 3, (log_file != NULL) ? log_file : "NULL");
+		throw;
+	}
+}
+
+void Harmonizer::close_input_file() throw (HarmonizerException) {
 	try {
 		if ((reader != NULL) && (reader->is_open())) {
 			reader->close();
@@ -504,9 +693,14 @@ void Harmonizer::close_file() throw (HarmonizerException) {
 			reader = NULL;
 		}
 
-		if (file != NULL) {
-			free(file);
-			file = NULL;
+		if (input_file != NULL) {
+			free(input_file);
+			input_file = NULL;
+		}
+
+		if (chr_column != NULL) {
+			free(chr_column);
+			chr_column = NULL;
 		}
 
 		if (id_column != NULL) {
@@ -537,7 +731,47 @@ void Harmonizer::close_file() throw (HarmonizerException) {
 		nonref_allele_column_pos = numeric_limits<int>::min();
 	} catch (ReaderException &e) {
 		HarmonizerException new_e(e);
-		new_e.add_message("Harmonizer", "close_file()", __LINE__, 4, (file != NULL) ? file : "NULL");
+		new_e.add_message("Harmonizer", "close_input_file()", __LINE__, 4, (input_file != NULL) ? input_file : "NULL");
+		throw new_e;
+	}
+}
+
+void Harmonizer::close_output_file() throw (HarmonizerException) {
+	try {
+		if (writer != NULL) {
+			writer->close();
+
+			delete writer;
+			writer = NULL;
+		}
+
+		if (output_file != NULL) {
+			free(output_file);
+			output_file = NULL;
+		}
+	} catch (WriterException &e) {
+		HarmonizerException new_e(e);
+		new_e.add_message("Harmonizer", "close_output_file()", __LINE__, 4, (output_file != NULL) ? output_file : "NULL");
+		throw new_e;
+	}
+}
+
+void Harmonizer::close_log_file() throw (HarmonizerException) {
+	try {
+		if (log_writer != NULL) {
+			log_writer->close();
+
+			delete log_writer;
+			log_writer = NULL;
+		}
+
+		if (log_file != NULL) {
+			free(log_file);
+			log_file = NULL;
+		}
+	} catch (WriterException &e) {
+		HarmonizerException new_e(e);
+		new_e.add_message("Harmonizer", "close_log_file()", __LINE__, 4, (log_file != NULL) ? log_file : "NULL");
 		throw new_e;
 	}
 }
@@ -546,18 +780,19 @@ void Harmonizer::process_header() throw (HarmonizerException) {
 	char* header = NULL;
 	char* token = NULL;
 
-	if ((file == NULL) || (reader == NULL) || (id_column == NULL)) {
+	if ((input_file == NULL) || (reader == NULL) || (chr_column == NULL) || (id_column == NULL)) {
 		return;
 	}
 
 	file_column_number = 0;
+	chr_column_pos = numeric_limits<int>::min();
 	id_column_pos = numeric_limits<int>::min();
 	ref_allele_column_pos = numeric_limits<int>::min();
 	nonref_allele_column_pos = numeric_limits<int>::min();
 
 	try {
 		if (reader->read_line() <= 0) {
-			throw HarmonizerException("Harmonizer", "process_header()", __LINE__, 16, 1, file);
+			throw HarmonizerException("Harmonizer", "process_header()", __LINE__, 16, 1, input_file);
 		}
 
 		header = *(reader->line);
@@ -568,298 +803,78 @@ void Harmonizer::process_header() throw (HarmonizerException) {
 		}
 		strcpy(header_backup, header);
 
-		if ((ref_allele_column != NULL) && (nonref_allele_column != NULL)) {
-			while ((token = auxiliary::strtok(&header, separator)) != NULL) {
-				if (auxiliary::strcmp_ignore_case(token, id_column) == 0) {
-					id_column_pos = file_column_number;
-				} else if (auxiliary::strcmp_ignore_case(token, ref_allele_column) == 0) {
-					ref_allele_column_pos = file_column_number;
-				} else if (auxiliary::strcmp_ignore_case(token, nonref_allele_column) == 0) {
-					nonref_allele_column_pos = file_column_number;
-				}
-				++file_column_number;
+		while ((token = auxiliary::strtok(&header, separator)) != NULL) {
+			if (auxiliary::strcmp_ignore_case(token, chr_column) == 0) {
+				chr_column_pos = file_column_number;
+			} else if (auxiliary::strcmp_ignore_case(token, id_column) == 0) {
+				id_column_pos = file_column_number;
+			} else if (auxiliary::strcmp_ignore_case(token, ref_allele_column) == 0) {
+				ref_allele_column_pos = file_column_number;
+			} else if (auxiliary::strcmp_ignore_case(token, nonref_allele_column) == 0) {
+				nonref_allele_column_pos = file_column_number;
 			}
+			++file_column_number;
+		}
 
-			if (ref_allele_column_pos < 0) {
-				throw HarmonizerException("Harmonizer", "process_header()", __LINE__, 17, ref_allele_column, file);
-			}
+		if (ref_allele_column_pos < 0) {
+			throw HarmonizerException("Harmonizer", "process_header()", __LINE__, 17, ref_allele_column, input_file);
+		}
 
-			if (nonref_allele_column_pos < 0) {
-				throw HarmonizerException("Harmonizer", "process_header()", __LINE__, 17, nonref_allele_column, file);
-			}
-		} else {
-			while ((token = auxiliary::strtok(&header, separator)) != NULL) {
-				if (auxiliary::strcmp_ignore_case(token, id_column) == 0) {
-					id_column_pos = file_column_number;
-				}
-				++file_column_number;
-			}
+		if (nonref_allele_column_pos < 0) {
+			throw HarmonizerException("Harmonizer", "process_header()", __LINE__, 17, nonref_allele_column, input_file);
+		}
+
+
+		if (chr_column_pos < 0) {
+			throw HarmonizerException("Harmonizer", "process_header()", __LINE__, 17, chr_column, input_file);
 		}
 
 		if (id_column_pos < 0) {
-			throw HarmonizerException("Harmonizer", "process_header()", __LINE__, 17, id_column, file);
+			throw HarmonizerException("Harmonizer", "process_header()", __LINE__, 17, id_column, input_file);
 		}
 	} catch (ReaderException &e) {
 		HarmonizerException new_e(e);
-		new_e.add_message("Harmonizer", "process_header()", __LINE__, 5, (file != NULL) ? file : "NULL");
+		new_e.add_message("Harmonizer", "process_header()", __LINE__, 5, (input_file != NULL) ? input_file : "NULL");
 		throw new_e;
 	}
 }
 
-void Harmonizer::harmonize_without_alleles(const char* output_file_name, bool gzip) throw (HarmonizerException) {
-	char* line = NULL;
-	int line_length = 0;
-	unsigned int line_number = 2u;
-
-	char* token = NULL;
-	char** tokens = NULL;
-
-	int column_number = 0;
-
-	id_index_entry query_id;
-	map_index_entry query_map;
-	id_index_entry* found_id = NULL;
-	map_index_entry* found_map = NULL;
-
-	char variant_type = '\0';
-
-	char* buffer = NULL;
-	char* buffer_tmp = NULL;
-	unsigned int buffer_tokens_number = 0u;
-	char* buffer_token = NULL;
-	char* buffer_tokens[3u];
-	char* end_ptr = NULL;
-
-	Writer* writer = NULL;
-
-	char* log_file_name = NULL;
-	Writer* log_writer = NULL;
-
-	if ((file == NULL) || (reader == NULL) || (id_column == NULL) || (id_column_pos < 0)) {
-		return;
+void Harmonizer::write_columns() throw (WriterException) {
+	writer->write("%s", tokens[0]);
+	for (int column_number = 1; column_number < file_column_number; ++column_number) {
+		writer->write("%c%s", separator, tokens[column_number]);
 	}
-
-	try {
-		if (output_file_name == NULL) {
-			throw HarmonizerException("Harmonizer", "harmonize_without_alleles( const char*, bool )", __LINE__, 0, "output_file_name");
-		}
-
-		if (strlen(output_file_name) <= 0) {
-			throw HarmonizerException("Harmonizer", "harmonize_without_alleles( const char*, bool )", __LINE__, 1, "output_file_name");
-		}
-
-		auxiliary::transform_file_name(&log_file_name, NULL, output_file_name, ".log", true);
-		if (log_file_name == NULL) {
-			throw HarmonizerException("Harmonizer", "harmonize_without_alleles( const char*, bool )", __LINE__, 18);
-		}
-
-		tokens = (char**)malloc(file_column_number * sizeof(char*));
-		if (tokens == NULL) {
-			throw HarmonizerException("Harmonizer", "harmonize_with_alleles( const char*, bool )", __LINE__, 2, file_column_number * sizeof(char*));
-		}
-
-		buffer = (char*)malloc(16777216 * sizeof(char));
-		if (buffer == NULL) {
-			throw HarmonizerException("Harmonizer", "harmonize_without_alleles( const char*, bool )", __LINE__, 2, 16777216 * sizeof(char));
-		}
-
-		writer = WriterFactory::create(gzip ? WriterFactory::GZIP : WriterFactory::TEXT);
-		writer->set_file_name(output_file_name);
-		writer->open();
-
-		log_writer = WriterFactory::create(WriterFactory::TEXT);
-		log_writer->set_file_name(log_file_name);
-		log_writer->open();
-
-		writer->write("%s\n", header_backup);
-
-		while ((line_length = reader->read_line()) > 0) {
-			line = *(reader->line);
-
-			column_number = 0;
-			while ((token = auxiliary::strtok(&line, separator)) != NULL) {
-				if (column_number < file_column_number) {
-					tokens[column_number] = token;
-				}
-				++column_number;
-			}
-
-			if (column_number < file_column_number) {
-				throw HarmonizerException("Harmonizer", "harmonize_without_alleles( const char*, bool )", __LINE__, 14, line_number, file, column_number, file_column_number);
-			} else if (column_number > file_column_number) {
-				throw HarmonizerException("Harmonizer", "harmonize_without_alleles( const char*, bool )", __LINE__, 15, line_number, file, column_number, file_column_number);
-			}
-
-			/* BEGIN: parse and map SNP identifier. */
-			if (auxiliary::strcmp_ignore_case(tokens[id_column_pos], "rs", 2) == 0) {
-				query_id.id = tokens[id_column_pos];
-				found_id = (id_index_entry*)bsearch(&query_id, id_index, index_size, sizeof(id_index_entry), qsort_id_index_entry_cmp);
-				if (found_id != NULL) {
-					found_map = &(map_index[found_id->location]);
-					variant_type = '\0';
-				} else {
-					found_map = NULL;
-				}
-			} else {
-				strcpy(buffer, tokens[id_column_pos]);
-				buffer_tmp = buffer;
-
-				buffer_tokens_number = 0u;
-				buffer_tokens[0u] = buffer_tokens[1u] = buffer_tokens[2u] = NULL;
-				while ((buffer_tokens_number < 3u) && ((buffer_token = auxiliary::strtok(&buffer_tmp, ':')) != NULL)) {
-					buffer_tokens[buffer_tokens_number++] = buffer_token;
-				}
-
-				if ((buffer_tokens[0u] != NULL) && (buffer_tokens[1u] != NULL)) {
-					if (auxiliary::strcmp_ignore_case(buffer_tokens[0u], "chr", 3) == 0) {
-						query_map.chromosome = buffer_tokens[0u] + 3;
-					} else {
-						query_map.chromosome = buffer_tokens[0u];
-					}
-
-					query_map.position = strtoul(buffer_tokens[1u], &end_ptr, 10);
-					if (end_ptr != buffer_tokens[1u]) {
-						found_map = (map_index_entry*)bsearch(&query_map, map_index, index_size, sizeof(map_index_entry), qsort_map_index_entry_cmp);
-					} else {
-						found_map = NULL;
-					}
-
-					if (buffer_tokens[2u] != NULL) {
-						if (auxiliary::strcmp_ignore_case(buffer_tokens[2u], VCF_SNP_TYPE) == 0) {
-							variant_type = 'S';
-						} else if ((auxiliary::strcmp_ignore_case(buffer_tokens[2u], VCF_INDEL_TYPE_01) == 0) ||
-								(auxiliary::strcmp_ignore_case(buffer_tokens[2u], VCF_INDEL_TYPE_02) == 0)) {
-							variant_type = 'I';
-						} else {
-							variant_type = 'O';
-						}
-					} else {
-						variant_type = '\0';
-					}
-				} else {
-					found_map = NULL;
-				}
-			}
-			/* END: parse and map SNP identifier. */
-
-			/* BEGIN: output new columns. */
-			if (id_column_pos == 0) {
-				if (found_map != NULL) {
-					if (found_map->type == 'S') {
-						writer->write("%s:%u:%s", found_map->chromosome, found_map->position, VCF_SNP_TYPE);
-
-						if ((variant_type != '\0') && (variant_type != 'S')) {
-							log_writer->write("Line %u: Variant type of variant %s doesn't match the variant type in the map file.\n", line_number, tokens[0]);
-						}
-					} else if (found_map->type == 'I') {
-						writer->write("%s:%u:%s", found_map->chromosome, found_map->position, VCF_INDEL_TYPE_01);
-
-						if ((variant_type != '\0') && (variant_type != 'I')) {
-							log_writer->write("Line %u: Variant type of variant %s doesn't match the variant type in the map file.\n", line_number, tokens[0]);
-						}
-					} else {
-						writer->write("%s:%u:%s", found_map->chromosome, found_map->position);
-						log_writer->write("Line %u: Variant type of variant %s was not found in the map file.", line_number, tokens[0]);
-					}
-				} else {
-					writer->write("%s", tokens[0]);
-					log_writer->write("Line %u: Variant %s was not found in the map file.\n", line_number, tokens[0]);
-				}
-			} else {
-				writer->write("%s", tokens[0]);
-			}
-
-			column_number = 1;
-			while (column_number < file_column_number) {
-				if (column_number == id_column_pos) {
-					if (found_map != NULL) {
-						if (found_map->type == 'S') {
-							writer->write("\t%s:%u:%s", found_map->chromosome, found_map->position, VCF_SNP_TYPE);
-
-							if ((variant_type != '\0') && (variant_type != 'S')) {
-								log_writer->write("Line %u: Variant type of variant %s doesn't match the variant type in the map file.\n", line_number, tokens[column_number]);
-							}
-						} else if (found_map->type == 'I') {
-							writer->write("\t%s:%u:%s", found_map->chromosome, found_map->position, VCF_INDEL_TYPE_01);
-
-							if ((variant_type != '\0') && (variant_type != 'I')) {
-								log_writer->write("Line %u: Variant type of variant %s doesn't match the variant type in the map file.\n", line_number, tokens[column_number]);
-							}
-						} else {
-							writer->write("\t%s:%u:%s", found_map->chromosome, found_map->position);
-							log_writer->write("Line %u: Variant type of variant %s was not found in the map file.", line_number, tokens[column_number]);
-						}
-					} else {
-						writer->write("\t%s", tokens[column_number]);
-						log_writer->write("Line %u: Variant %s was not found in the map file.\n", line_number, tokens[column_number]);
-					}
-				} else {
-					writer->write("\t%s", tokens[column_number]);
-				}
-				++column_number;
-			}
-
-			writer->write("\n");
-			/* END: output new columns. */
-
-			++line_number;
-		}
-
-		writer->close();
-		log_writer->close();
-
-		delete(writer);
-		writer = NULL;
-
-		delete(log_writer);
-		log_writer = NULL;
-
-		free(log_file_name);
-		log_file_name = NULL;
-
-		free(buffer);
-		buffer = NULL;
-
-		if (line_length == 0) {
-			throw HarmonizerException("Harmonizer", "harmonize_without_alleles( const char*, bool )", __LINE__, 13, line_number, file);
-		}
-	} catch (ReaderException &e) {
-		HarmonizerException new_e(e);
-		new_e.add_message("Harmonizer", "harmonize_without_alleles( const char*, bool )", __LINE__, 5, (file != NULL) ? file : "NULL");
-		throw new_e;
-	} catch (WriterException &e) {
-		HarmonizerException new_e(e);
-		new_e.add_message("Harmonizer", "harmonize_without_alleles( const char*, bool )", __LINE__, 5, (file != NULL) ? file : "NULL");
-		throw new_e;
-	} catch (HarmonizerException &e) {
-		e.add_message("Harmonizer", "harmonize_without_alleles( const char*, bool )", __LINE__, 5, (file != NULL) ? file : "NULL");
-		throw;
-	}
+	writer->write("\n");
 }
 
-void Harmonizer::harmonize_with_alleles(const char* output_file_name, bool drop, bool gzip) throw (HarmonizerException) {
+void Harmonizer::harmonize(bool drop) throw (HarmonizerException) {
 	char* line = NULL;
 	int line_length = 0;
-	unsigned int line_number = 2u;
+	unsigned int line_number = 1u;
 
 	char* token = NULL;
-	char** tokens = NULL;
 
 	int column_number = 0;
 
+	chr_index* index = NULL;
+	unsigned int index_size = 0u;
+
+	position_index_entry* position_index = NULL;
+	position_index_entry query_position;
+	position_index_entry* found_position = NULL;
+
+	id_index_entry* id_index = NULL;
 	id_index_entry query_id;
-	map_index_entry query_map;
 	id_index_entry* found_id = NULL;
-	map_index_entry* found_map = NULL;
 
 	unsigned int found_id_index_entry_pos = 0u;
-	unsigned int found_map_index_entry_pos = 0u;
+	unsigned int found_position_index_entry_pos = 0u;
 	long int position = 0;
 
 	char* ref_allele = NULL;
 	char* nonref_allele = NULL;
-
-	bool type_consistent = false;
+	unsigned int ref_allele_length = 0u;
+	unsigned int nonref_allele_length = 0u;
 
 	char* buffer = NULL;
 	char* buffer_tmp = NULL;
@@ -868,56 +883,42 @@ void Harmonizer::harmonize_with_alleles(const char* output_file_name, bool drop,
 	char* buffer_tokens[3u];
 	char* end_ptr = NULL;
 
-	Writer* writer = NULL;
+	bool empty_ref_allele = false;
+	bool empty_nonref_allele = false;
+	bool recode_alleles = false;
+	bool consistent_type = false;
+	bool consistent_alleles = false;
 
-	char* log_file_name = NULL;
-	Writer* log_writer = NULL;
-
-	bool unresolved = true;
-
-	if ((file == NULL) || (reader == NULL) || (id_column == NULL) || (id_column_pos < 0)) {
+	if ((input_file == NULL) || (reader == NULL) ||
+			(output_file == NULL) || (writer == NULL) ||
+			(log_file == NULL) || (log_writer == NULL) ||
+			(chr_column == NULL) || (chr_column_pos < 0) ||
+			(id_column == NULL) || (id_column_pos < 0) ||
+			(ref_allele_column == NULL) || (ref_allele_column_pos < 0) ||
+			(nonref_allele_column == NULL) || (nonref_allele_column_pos < 0)) {
 		return;
 	}
 
 	try {
-		if (output_file_name == NULL) {
-			throw HarmonizerException("Harmonizer", "harmonize_with_alleles( const char*, bool )", __LINE__, 0, "output_file_name");
-		}
-
-		if (strlen(output_file_name) <= 0) {
-			throw HarmonizerException("Harmonizer", "harmonize_with_alleles( const char*, bool )", __LINE__, 1, "output_file_name");
-		}
-
-		auxiliary::transform_file_name(&log_file_name, NULL, output_file_name, ".log", true);
-		if (log_file_name == NULL) {
-			throw HarmonizerException("Harmonizer", "harmonize_with_alleles( const char*, bool )", __LINE__, 18);
-		}
-
 		tokens = (char**)malloc(file_column_number * sizeof(char*));
 		if (tokens == NULL) {
-			throw HarmonizerException("Harmonizer", "harmonize_with_alleles( const char*, bool )", __LINE__, 2, file_column_number * sizeof(char*));
+			throw HarmonizerException("Harmonizer", "harmonize( bool )", __LINE__, 2, file_column_number * sizeof(char*));
 		}
 
 		buffer = (char*)malloc(16777216 * sizeof(char));
 		if (buffer == NULL) {
-			throw HarmonizerException("Harmonizer", "harmonize_with_alleles( const char*, bool )", __LINE__, 2, 16777216 * sizeof(char));
+			throw HarmonizerException("Harmonizer", "harmonize( bool )", __LINE__, 2, 16777216 * sizeof(char));
 		}
-
-		writer = WriterFactory::create(gzip ? WriterFactory::GZIP : WriterFactory::TEXT);
-		writer->set_file_name(output_file_name);
-		writer->open();
-
-		log_writer = WriterFactory::create(WriterFactory::TEXT);
-		log_writer->set_file_name(log_file_name);
-		log_writer->open();
 
 		writer->write("%s\n", header_backup);
 
 		while ((line_length = reader->read_line()) > 0) {
 			line = *(reader->line);
+			++line_number;
 
-			found_id = NULL;
-			found_map = NULL;
+			recode_alleles = false;
+			consistent_type = false;
+			consistent_alleles = false;
 
 			column_number = 0;
 			while ((token = auxiliary::strtok(&line, separator)) != NULL) {
@@ -928,220 +929,628 @@ void Harmonizer::harmonize_with_alleles(const char* output_file_name, bool drop,
 			}
 
 			if (column_number < file_column_number) {
-				throw HarmonizerException("Harmonizer", "harmonize_with_alleles( const char*, bool )", __LINE__, 14, line_number, file, column_number, file_column_number);
+				throw HarmonizerException("Harmonizer", "harmonize( bool )", __LINE__, 14, line_number, input_file, column_number, file_column_number);
 			} else if (column_number > file_column_number) {
-				throw HarmonizerException("Harmonizer", "harmonize_with_alleles( const char*, bool )", __LINE__, 15, line_number, file, column_number, file_column_number);
+				throw HarmonizerException("Harmonizer", "harmonize( bool )", __LINE__, 15, line_number, input_file, column_number, file_column_number);
 			}
 
+			auxiliary::trim(&(tokens[chr_column_pos]));
+			map_index_by_chr_it = map_index_by_chr.find(tokens[chr_column_pos]);
+			if (map_index_by_chr_it == map_index_by_chr.end()) {
+				log_writer->write("Line %u: (WARNING) Chromosome %s of %s is not in the map.\n", line_number, tokens[chr_column_pos], tokens[id_column_pos]);
+				if (!drop) write_columns();
+				continue;
+			}
+
+			index = map_index_by_chr_it->second;
+			index_size = index->n;
+
+			position_index = index->positions;
+			id_index = index->ids;
+
+			found_id = NULL;
+			found_position = NULL;
+
+			auxiliary::trim(&(tokens[ref_allele_column_pos]));
 			ref_allele = tokens[ref_allele_column_pos];
-			auxiliary::trim_start(ref_allele);
-			auxiliary::trim_end(ref_allele);
+			ref_allele_length = strlen(ref_allele);
 
+			auxiliary::trim(&(tokens[nonref_allele_column_pos]));
 			nonref_allele = tokens[nonref_allele_column_pos];
-			auxiliary::trim_start(nonref_allele);
-			auxiliary::trim_end(nonref_allele);
+			nonref_allele_length = strlen(nonref_allele);
 
-			/* BEGIN: parse and map SNP identifier. */
-			if (auxiliary::strcmp_ignore_case(tokens[id_column_pos], "rs", 2) == 0) {
-				/* BEGIN: check alleles. */
-				if (((auxiliary::strcmp_ignore_case(ref_allele, "A") != 0) && (auxiliary::strcmp_ignore_case(ref_allele, "C") != 0) &&
-						(auxiliary::strcmp_ignore_case(ref_allele, "G") != 0) && (auxiliary::strcmp_ignore_case(ref_allele, "T") != 0)) ||
-						((auxiliary::strcmp_ignore_case(nonref_allele, "A") != 0) && (auxiliary::strcmp_ignore_case(nonref_allele, "C") != 0) &&
-								(auxiliary::strcmp_ignore_case(nonref_allele, "G") != 0) && (auxiliary::strcmp_ignore_case(nonref_allele, "T") != 0))) {
-					log_writer->write("Line %u (WARNING): %s has incorrect alleles (only A/C/G/T are allowed).\n", line_number, tokens[id_column_pos]);
-				}
-				/* END: check alleles. */
-
-				/* BEGIN: Find matches in map by chromosome and position. */
+			auxiliary::trim(&(tokens[id_column_pos]));
+			if (auxiliary::strcmp_ignore_case(tokens[id_column_pos], "rs", 2) == 0) { // Look up by rsID
 				query_id.id = tokens[id_column_pos];
 				found_id = (id_index_entry*)bsearch(&query_id, id_index, index_size, sizeof(id_index_entry), qsort_id_index_entry_cmp);
-				/* END: Find matches in map by chromosome and position. */
+				if (found_id == NULL) {
+					log_writer->write("Line %u: (WARNING) %s is not in the map.\n", line_number, query_id.id);
+					if (!drop) write_columns();
+					continue;
+				}
 
-				/* BEGIN: Check all matches for consistent type. */
-				if (found_id != NULL) {
-					found_id_index_entry_pos = found_id - id_index;
-					type_consistent = false;
+				if (((auxiliary::strcmp_ignore_case(ref_allele, "A") == 0) || (auxiliary::strcmp_ignore_case(ref_allele, "C") == 0) ||
+					(auxiliary::strcmp_ignore_case(ref_allele, "G") == 0) || (auxiliary::strcmp_ignore_case(ref_allele, "T") == 0)) &&
+					((auxiliary::strcmp_ignore_case(nonref_allele, "A") == 0) || (auxiliary::strcmp_ignore_case(nonref_allele, "C") == 0) ||
+						(auxiliary::strcmp_ignore_case(nonref_allele, "G") == 0) || (auxiliary::strcmp_ignore_case(nonref_allele, "T") == 0))) {
+					query_id.type = 'S';
+				} else if (((auxiliary::strcmp_ignore_case(ref_allele, "D") == 0) && (auxiliary::strcmp_ignore_case(nonref_allele, "R") == 0)) ||
+							((auxiliary::strcmp_ignore_case(ref_allele, "R") == 0) && (auxiliary::strcmp_ignore_case(nonref_allele, "D") == 0))) {
+					query_id.type = 'I';
+				} else if (((auxiliary::strcmp_ignore_case(ref_allele, "I") == 0) && (auxiliary::strcmp_ignore_case(nonref_allele, "R") == 0)) ||
+							((auxiliary::strcmp_ignore_case(ref_allele, "R") == 0) && (auxiliary::strcmp_ignore_case(nonref_allele, "I") == 0))) {
+					query_id.type = 'I';
+				} else {
+					query_id.type = 'I';
 
-					position = found_id_index_entry_pos;
-					while ((position >= 0) && (qsort_id_index_entry_cmp(&(id_index[position]), &query_id) == 0)) {
-						if (map_index[id_index[position].location].type == 'S') {
-							type_consistent = true;
-							break;
-						}
-						--found_id_index_entry_pos;
+					if (auxiliary::strcmp_ignore_case(ref_allele, nonref_allele) == 0) {
+						log_writer->write("Line %u: (WARNING) Alleles of %s don't match the specified variation type.\n", line_number, tokens[id_column_pos]);
+						if (!drop) write_columns();
+						continue;
 					}
 
-					if (!type_consistent) {
+					if ((ref_allele_length == nonref_allele_length) || (strspn(ref_allele, "ACGT") != ref_allele_length) || (strspn(nonref_allele, "ACGT") != nonref_allele_length)) {
+						log_writer->write("Line %u: (WARNING) Alleles of %s don't match the specified variation type.\n", line_number, tokens[id_column_pos]);
+						if (!drop) write_columns();
+						continue;
+					}
+
+					recode_alleles = true;
+				}
+
+				found_id_index_entry_pos = found_id - id_index;
+
+				if (recode_alleles) {
+					position = found_id_index_entry_pos;
+					while ((position >= 0) && (qsort_id_index_entry_cmp(&(id_index[position]), &query_id) == 0)) {
+						if (position_index[id_index[position].location].type == query_id.type) {
+							consistent_type = true;
+
+							if ((auxiliary::strcmp_ignore_case(position_index[id_index[position].location].ref_allele, ref_allele) == 0) &&
+									(auxiliary::strcmp_ignore_case(position_index[id_index[position].location].nonref_allele, nonref_allele) == 0)) {
+								consistent_alleles = true;
+
+								if (ref_allele_length > nonref_allele_length) {
+									log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "R", "D");
+									tokens[ref_allele_column_pos][0] = 'R';
+									tokens[ref_allele_column_pos][1] = '\0';
+									tokens[nonref_allele_column_pos][0] = 'D';
+									tokens[nonref_allele_column_pos][1] = '\0';
+								} else if (ref_allele_length < nonref_allele_length) {
+									log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "R", "I");
+									tokens[ref_allele_column_pos][0] = 'R';
+									tokens[ref_allele_column_pos][1] = '\0';
+									tokens[nonref_allele_column_pos][0] = 'I';
+									tokens[nonref_allele_column_pos][1] = '\0';
+								}
+
+								break;
+							} else if ((auxiliary::strcmp_ignore_case(position_index[id_index[position].location].ref_allele, nonref_allele) == 0) &&
+									(auxiliary::strcmp_ignore_case(position_index[id_index[position].location].nonref_allele, ref_allele) == 0)) {
+								consistent_alleles = true;
+
+								if (ref_allele_length > nonref_allele_length) {
+									log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "I", "R");
+									tokens[ref_allele_column_pos][0] = 'I';
+									tokens[ref_allele_column_pos][1] = '\0';
+									tokens[nonref_allele_column_pos][0] = 'R';
+									tokens[nonref_allele_column_pos][1] = '\0';
+								} else if (ref_allele_length < nonref_allele_length) {
+									log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "D", "R");
+									tokens[ref_allele_column_pos][0] = 'D';
+									tokens[ref_allele_column_pos][1] = '\0';
+									tokens[nonref_allele_column_pos][0] = 'R';
+									tokens[nonref_allele_column_pos][1] = '\0';
+								}
+
+								break;
+							}
+						}
+						--position;
+					}
+
+					if (!consistent_type) {
 						position = found_id_index_entry_pos;
 						++position;
 						while ((position < index_size) && (qsort_id_index_entry_cmp(&(id_index[position]), &query_id) == 0)) {
-							if (map_index[id_index[position].location].type == 'S') {
-								type_consistent = true;
-								break;
+							if (position_index[id_index[position].location].type == query_id.type) {
+								consistent_type = true;
+
+								if ((auxiliary::strcmp_ignore_case(position_index[id_index[position].location].ref_allele, ref_allele) == 0) &&
+										(auxiliary::strcmp_ignore_case(position_index[id_index[position].location].nonref_allele, nonref_allele) == 0)) {
+									consistent_alleles = true;
+
+									if (ref_allele_length > nonref_allele_length) {
+										log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "R", "D");
+										tokens[ref_allele_column_pos][0] = 'R';
+										tokens[ref_allele_column_pos][1] = '\0';
+										tokens[nonref_allele_column_pos][0] = 'D';
+										tokens[nonref_allele_column_pos][1] = '\0';
+									} else if (ref_allele_length < nonref_allele_length) {
+										log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "R", "I");
+										tokens[ref_allele_column_pos][0] = 'R';
+										tokens[ref_allele_column_pos][1] = '\0';
+										tokens[nonref_allele_column_pos][0] = 'I';
+										tokens[nonref_allele_column_pos][1] = '\0';
+									}
+
+									break;
+								} else if ((auxiliary::strcmp_ignore_case(position_index[id_index[position].location].ref_allele, nonref_allele) == 0) &&
+										(auxiliary::strcmp_ignore_case(position_index[id_index[position].location].nonref_allele, ref_allele) == 0)) {
+									consistent_alleles = true;
+
+									if (ref_allele_length > nonref_allele_length) {
+										log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "I", "R");
+										tokens[ref_allele_column_pos][0] = 'I';
+										tokens[ref_allele_column_pos][1] = '\0';
+										tokens[nonref_allele_column_pos][0] = 'R';
+										tokens[nonref_allele_column_pos][1] = '\0';
+									} else if (ref_allele_length < nonref_allele_length) {
+										log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "D", "R");
+										tokens[ref_allele_column_pos][0] = 'D';
+										tokens[ref_allele_column_pos][1] = '\0';
+										tokens[nonref_allele_column_pos][0] = 'R';
+										tokens[nonref_allele_column_pos][1] = '\0';
+									}
+
+									break;
+								}
 							}
-							++found_id_index_entry_pos;
+							++position;
 						}
 					}
 
-					if (type_consistent) {
-						found_map = &(map_index[id_index[position].location]);
-						sprintf(buffer, "%s:%lu:%s", found_map->chromosome, found_map->position, VCF_SNP_TYPE);
-						log_writer->write("Line %u: %s changed to %s.\n", line_number, tokens[id_column_pos], buffer);
-						tokens[id_column_pos] = buffer;
-						unresolved = false;
-					} else {
-						log_writer->write("Line %u (WARNING): Type of %s doesn't match type in the map.\n", line_number, tokens[id_column_pos]);
+					if (!consistent_type) {
+						log_writer->write("Line %u: (WARNING) Type of %s doesn't match type in the map.\n", line_number, query_id.id);
+						if (!drop) write_columns();
+						continue;
+					}
+
+					if (!consistent_alleles) {
+						log_writer->write("Line %u: (WARNING) Alleles of %s don't match alleles in the map.\n", line_number, tokens[id_column_pos]);
+						if (!drop) write_columns();
+						continue;
 					}
 				} else {
-					log_writer->write("Line %u (WARNING): %s wasn't found in the map.\n", line_number, tokens[id_column_pos]);
-				}
-				/* END: Check all matches for consistent type. */
-			} else {
-				strcpy(buffer, tokens[id_column_pos]);
-				buffer_tmp = buffer;
-
-				buffer_tokens_number = 0u;
-				buffer_tokens[0u] = buffer_tokens[1u] = buffer_tokens[2u] = NULL;
-				while ((buffer_tokens_number < 3u) && ((buffer_token = auxiliary::strtok(&buffer_tmp, ':')) != NULL)) {
-					buffer_tokens[buffer_tokens_number++] = buffer_token;
-				}
-
-				/* BEGIN: Check/guess variant type and check alleles. */
-				if (buffer_tokens[2u] != NULL) {
-					if (auxiliary::strcmp_ignore_case(buffer_tokens[2u], VCF_SNP_TYPE) == 0) {
-						query_map.type = 'S';
-
-						if (((auxiliary::strcmp_ignore_case(ref_allele, "A") != 0) && (auxiliary::strcmp_ignore_case(ref_allele, "C") != 0) &&
-								(auxiliary::strcmp_ignore_case(ref_allele, "G") != 0) && (auxiliary::strcmp_ignore_case(ref_allele, "T") != 0)) ||
-								((auxiliary::strcmp_ignore_case(nonref_allele, "A") != 0) && (auxiliary::strcmp_ignore_case(nonref_allele, "C") != 0) &&
-										(auxiliary::strcmp_ignore_case(nonref_allele, "G") != 0) && (auxiliary::strcmp_ignore_case(nonref_allele, "T") != 0))) {
-							log_writer->write("Line %u (WARNING): %s has incorrect alleles (only A/C/G/T are allowed).\n", line_number, tokens[id_column_pos]);
-						}
-					} else {
-						query_map.type = 'I';
-
-						if ((auxiliary::strcmp_ignore_case(ref_allele, "A") == 0) || (auxiliary::strcmp_ignore_case(ref_allele, "C") == 0) ||
-								(auxiliary::strcmp_ignore_case(ref_allele, "G") == 0) || (auxiliary::strcmp_ignore_case(ref_allele, "T") == 0) ||
-								(auxiliary::strcmp_ignore_case(nonref_allele, "A") == 0) || (auxiliary::strcmp_ignore_case(nonref_allele, "C") == 0) ||
-								(auxiliary::strcmp_ignore_case(nonref_allele, "G") == 0) || (auxiliary::strcmp_ignore_case(nonref_allele, "T") == 0)) {
-							log_writer->write("Line %u (WARNING): %s has incorrect alleles (A/C/G/T are not allowed).\n", line_number, tokens[id_column_pos]);
-						}
-					}
-				} else {
-					if (((auxiliary::strcmp_ignore_case(ref_allele, "A") == 0) || (auxiliary::strcmp_ignore_case(ref_allele, "C") == 0) ||
-							(auxiliary::strcmp_ignore_case(ref_allele, "G") == 0) || (auxiliary::strcmp_ignore_case(ref_allele, "T") == 0)) &&
-							((auxiliary::strcmp_ignore_case(nonref_allele, "A") == 0) || (auxiliary::strcmp_ignore_case(nonref_allele, "C") == 0) ||
-									(auxiliary::strcmp_ignore_case(nonref_allele, "G") == 0) || (auxiliary::strcmp_ignore_case(nonref_allele, "T") == 0))) {
-						query_map.type = 'S';
-					} else {
-						query_map.type = 'I';
-					}
-				}
-				/* END: Check/guess variant type and check alleles. */
-
-				/* BEGIN: Find matches in map by chromosome and position. */
-				if ((buffer_tokens[0u] != NULL) && (buffer_tokens[1u] != NULL)) {
-					if (auxiliary::strcmp_ignore_case(buffer_tokens[0u], "chr", 3) == 0) {
-						query_map.chromosome = buffer_tokens[0u] + 3;
-					} else {
-						query_map.chromosome = buffer_tokens[0u];
-					}
-
-					query_map.position = strtoul(buffer_tokens[1u], &end_ptr, 10);
-					if (end_ptr != buffer_tokens[1u]) {
-						found_map = (map_index_entry*)bsearch(&query_map, map_index, index_size, sizeof(map_index_entry), qsort_map_index_entry_cmp);
-					}
-				}
-				/* END: Find matches in map by chromosome and position. */
-
-				/* BEGIN: Check all matches for consistent type. */
-				if (found_map != NULL) {
-					found_map_index_entry_pos = found_map - map_index;
-					type_consistent = false;
-
-					position = found_map_index_entry_pos;
-					while ((position >= 0) && (qsort_map_index_entry_cmp(&(map_index[position]), &query_map) == 0)) {
-						if (map_index[position].type == query_map.type) {
-							type_consistent = true;
+					position = found_id_index_entry_pos;
+					while ((position >= 0) && (qsort_id_index_entry_cmp(&(id_index[position]), &query_id) == 0)) {
+						if (position_index[id_index[position].location].type == query_id.type) {
+							consistent_type = true;
 							break;
 						}
 						--position;
 					}
 
-					if (!type_consistent) {
-						position = found_map_index_entry_pos;
+					if (!consistent_type) {
+						position = found_id_index_entry_pos;
 						++position;
-						while ((position < index_size) && (qsort_map_index_entry_cmp(&(map_index[position]), &query_map) == 0)) {
-							if (map_index[position].type == query_map.type) {
-								type_consistent = true;
+						while ((position < index_size) && (qsort_id_index_entry_cmp(&(id_index[position]), &query_id) == 0)) {
+							if (position_index[id_index[position].location].type == query_id.type) {
+								consistent_type = true;
 								break;
 							}
 							++position;
 						}
 					}
 
-					if (type_consistent) {
-						found_map = &(map_index[position]);
-						if (found_map->type == 'S') {
-							sprintf(buffer, "%s:%lu:%s", found_map->chromosome, found_map->position, VCF_SNP_TYPE);
-						} else {
-							sprintf(buffer, "%s:%lu:%s", found_map->chromosome, found_map->position, VCF_INDEL_TYPE_01);
-						}
+					if (!consistent_type) {
+						log_writer->write("Line %u: (WARNING) Type of %s doesn't match type in the map.\n", line_number, query_id.id);
+						if (!drop) write_columns();
+						continue;
+					}
+				}
 
-						if (strcmp(buffer,  tokens[id_column_pos]) != 0) {
-							log_writer->write("Line %u: %s changed to %s.\n", line_number, tokens[id_column_pos], buffer);
-							tokens[id_column_pos] = buffer;
-						}
+				found_position = &(position_index[id_index[position].location]);
+				if (found_position->type == 'S') {
+					sprintf(buffer, "%s:%lu:%s", tokens[chr_column_pos], found_position->position, VCF_SNP_TYPE);
+				} else {
+					sprintf(buffer, "%s:%lu:%s", tokens[chr_column_pos], found_position->position, VCF_INDEL_TYPE_01);
+				}
+				log_writer->write("Line %u: %s changed to %s.\n", line_number, tokens[id_column_pos], buffer);
+				tokens[id_column_pos] = buffer;
+			} else if (auxiliary::strcmp_ignore_case(tokens[id_column_pos], "merged_del", 10) == 0) { // Look up by id
+				query_id.id = tokens[id_column_pos];
+				found_id = (id_index_entry*)bsearch(&query_id, id_index, index_size, sizeof(id_index_entry), qsort_id_index_entry_cmp);
+				if (found_id == NULL) {
+					log_writer->write("Line %u: (WARNING) %s is not in the map.\n", line_number, query_id.id);
+					if (!drop) write_columns();
+					continue;
+				}
 
-						unresolved = false;
+				if (((auxiliary::strcmp_ignore_case(ref_allele, "D") == 0) && (auxiliary::strcmp_ignore_case(nonref_allele, "R") == 0)) ||
+							((auxiliary::strcmp_ignore_case(ref_allele, "R") == 0) && (auxiliary::strcmp_ignore_case(nonref_allele, "D") == 0))) {
+					query_id.type = 'I';
+				} else {
+					query_id.type = 'I';
+
+					empty_ref_allele = false;
+					empty_nonref_allele = false;
+
+					if ((strcmp(ref_allele, "-") == 0) || (strcmp(ref_allele, ".") == 0) || (auxiliary::strcmp_ignore_case(ref_allele, "NA") == 0)) {
+						empty_ref_allele = true;
+					} else if (strspn(ref_allele, "ACGT") != ref_allele_length) {
+						log_writer->write("Line %u: (WARNING) Alleles of %s don't match the specified variation type.\n", line_number, tokens[id_column_pos]);
+						if (!drop) write_columns();
+						continue;
+					}
+
+					if ((strcmp(nonref_allele, "-") == 0) || (strcmp(nonref_allele, ".") == 0) || (auxiliary::strcmp_ignore_case(nonref_allele, "NA") == 0)) {
+						empty_nonref_allele = true;
+					} else if (strspn(nonref_allele, "ACGT") != nonref_allele_length) {
+						log_writer->write("Line %u: (WARNING) Alleles of %s don't match the specified variation type.\n", line_number, tokens[id_column_pos]);
+						if (!drop) write_columns();
+						continue;
+					}
+
+					if (empty_ref_allele && empty_nonref_allele) {
+						log_writer->write("Line %u: (WARNING) Alleles of %s don't match the specified variation type.\n", line_number, tokens[id_column_pos]);
+						if (!drop) write_columns();
+						continue;
+					}
+
+					if (!empty_ref_allele && !empty_nonref_allele && (ref_allele_length == nonref_allele_length)) {
+						log_writer->write("Line %u: (WARNING) Alleles of %s don't match the specified variation type.\n", line_number, tokens[id_column_pos]);
+						if (!drop) write_columns();
+						continue;
+					}
+
+					if (empty_ref_allele) {
+						log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "D", "R");
+						tokens[ref_allele_column_pos][0] = 'D';
+						tokens[ref_allele_column_pos][1] = '\0';
+						tokens[nonref_allele_column_pos][0] = 'R';
+						tokens[nonref_allele_column_pos][1] = '\0';
+					} else if (empty_nonref_allele) {
+						log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "R", "D");
+						tokens[ref_allele_column_pos][0] = 'R';
+						tokens[ref_allele_column_pos][1] = '\0';
+						tokens[nonref_allele_column_pos][0] = 'D';
+						tokens[nonref_allele_column_pos][1] = '\0';
+					} else if (ref_allele_length > nonref_allele_length) {
+						log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "R", "D");
+						tokens[ref_allele_column_pos][0] = 'R';
+						tokens[ref_allele_column_pos][1] = '\0';
+						tokens[nonref_allele_column_pos][0] = 'D';
+						tokens[nonref_allele_column_pos][1] = '\0';
+					} else if (ref_allele_length < nonref_allele_length) {
+						log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "D", "R");
+						tokens[ref_allele_column_pos][0] = 'D';
+						tokens[ref_allele_column_pos][1] = '\0';
+						tokens[nonref_allele_column_pos][0] = 'R';
+						tokens[nonref_allele_column_pos][1] = '\0';
 					} else {
-						log_writer->write("Line %u (WARNING): Type of %s doesn't match type in the map.\n", line_number, tokens[id_column_pos]);
+						log_writer->write("Line %u: (WARNING) Alleles of %s don't match the specified variation type.\n", line_number, tokens[id_column_pos]);
+						if (!drop) write_columns();
+						continue;
+					}
+				}
+
+				found_id_index_entry_pos = found_id - id_index;
+
+				position = found_id_index_entry_pos;
+				while ((position >= 0) && (qsort_id_index_entry_cmp(&(id_index[position]), &query_id) == 0)) {
+					if (position_index[id_index[position].location].type == query_id.type) {
+						consistent_type = true;
+						break;
+					}
+					--position;
+				}
+
+				if (!consistent_type) {
+					position = found_id_index_entry_pos;
+					++position;
+					while ((position < index_size) && (qsort_id_index_entry_cmp(&(id_index[position]), &query_id) == 0)) {
+						if (position_index[id_index[position].location].type == query_id.type) {
+							consistent_type = true;
+							break;
+						}
+						++position;
+					}
+				}
+
+				if (!consistent_type) {
+					log_writer->write("Line %u: (WARNING) Type of %s doesn't match type in the map.\n", line_number, query_id.id);
+					if (!drop) write_columns();
+					continue;
+				}
+
+				found_position = &(position_index[id_index[position].location]);
+				if (found_position->type == 'S') {
+					sprintf(buffer, "%s:%lu:%s", tokens[chr_column_pos], found_position->position, VCF_SNP_TYPE);
+				} else {
+					sprintf(buffer, "%s:%lu:%s", tokens[chr_column_pos], found_position->position, VCF_INDEL_TYPE_01);
+				}
+				log_writer->write("Line %u: %s changed to %s.\n", line_number, tokens[id_column_pos], buffer);
+				tokens[id_column_pos] = buffer;
+			} else { // Look up by position
+				strcpy(buffer, tokens[id_column_pos]);
+				buffer_tmp = buffer;
+
+				buffer_tokens_number = 0u;
+				buffer_tokens[0u] = buffer_tokens[1u] = buffer_tokens[2u] = NULL;
+				while ((buffer_tokens_number < 3u) && ((buffer_token = auxiliary::strtok(&buffer_tmp, ':')) != NULL)) {
+					buffer_tokens[buffer_tokens_number++] = buffer_token;
+				}
+
+				if ((buffer_tokens_number < 2u) || (buffer_tokens_number > 3u)) {
+					log_writer->write("Line %u: (WARNING) %s identifier doesn't follow CHR:POS, CHR:POS:TYPE, or rsID formats.\n", line_number, tokens[id_column_pos]);
+					if (!drop) write_columns();
+					continue;
+				}
+
+				query_position.position = strtoul(buffer_tokens[1u], &end_ptr, 10);
+				if (end_ptr == buffer_tokens[1u]) {
+					log_writer->write("Line %u: (WARNING) Position of %s can't be parsed to integer.\n", line_number, tokens[id_column_pos]);
+					if (!drop) write_columns();
+					continue;
+				}
+
+				found_position = (position_index_entry*)bsearch(&query_position, position_index, index_size, sizeof(position_index_entry), qsort_position_index_entry_cmp);
+				if (found_position == NULL) {
+					log_writer->write("Line %u: (WARNING) %s is not in the map.\n", line_number, tokens[id_column_pos]);
+					if (!drop) write_columns();
+					continue;
+				}
+
+				query_position.type = '\0';
+				if (buffer_tokens[2u] != NULL) {
+					if (auxiliary::strcmp_ignore_case(buffer_tokens[2u], VCF_SNP_TYPE) == 0) {
+						//CHR:POS:SNP
+						query_position.type = 'S';
+						if (((auxiliary::strcmp_ignore_case(ref_allele, "A") != 0) && (auxiliary::strcmp_ignore_case(ref_allele, "C") != 0) &&
+								(auxiliary::strcmp_ignore_case(ref_allele, "G") != 0) && (auxiliary::strcmp_ignore_case(ref_allele, "T") != 0)) ||
+								((auxiliary::strcmp_ignore_case(nonref_allele, "A") != 0) && (auxiliary::strcmp_ignore_case(nonref_allele, "C") != 0) &&
+										(auxiliary::strcmp_ignore_case(nonref_allele, "G") != 0) && (auxiliary::strcmp_ignore_case(nonref_allele, "T") != 0))) {
+							log_writer->write("Line %u: (WARNING) Alleles of %s don't match the specified variation type.\n", line_number, tokens[id_column_pos]);
+							if (!drop) write_columns();
+							continue;
+						}
+					} else if (auxiliary::strcmp_ignore_case(buffer_tokens[2u], "D") == 0) {
+						//CHR:POS:D
+						query_position.type = 'I';
+						if ((strspn(ref_allele, "ACGT") == ref_allele_length) && ((strspn(nonref_allele, "ACGT") == nonref_allele_length))) {
+							if (ref_allele_length > nonref_allele_length) {
+								log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "R", "D");
+								tokens[ref_allele_column_pos][0] = 'R';
+								tokens[ref_allele_column_pos][1] = '\0';
+								tokens[nonref_allele_column_pos][0] = 'D';
+								tokens[nonref_allele_column_pos][1] = '\0';
+							} else if (ref_allele_length < nonref_allele_length) {
+								log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "D", "R");
+								tokens[ref_allele_column_pos][0] = 'D';
+								tokens[ref_allele_column_pos][1] = '\0';
+								tokens[nonref_allele_column_pos][0] = 'R';
+								tokens[nonref_allele_column_pos][1] = '\0';
+							} else {
+								log_writer->write("Line %u: (WARNING) Alleles of %s don't match the specified variation type.\n", line_number, tokens[id_column_pos]);
+								if (!drop) write_columns();
+								continue;
+							}
+						} else if (((auxiliary::strcmp_ignore_case(ref_allele, "D") != 0) || (auxiliary::strcmp_ignore_case(nonref_allele, "R") != 0)) &&
+									((auxiliary::strcmp_ignore_case(ref_allele, "R") != 0) || (auxiliary::strcmp_ignore_case(nonref_allele, "D") != 0))) {
+							log_writer->write("Line %u: (WARNING) Alleles of %s don't match the specified variation type.\n", line_number, tokens[id_column_pos]);
+							if (!drop) write_columns();
+							continue;
+						}
+					} else if (auxiliary::strcmp_ignore_case(buffer_tokens[2u], "I") == 0) {
+						//CHR:POS:I
+						query_position.type = 'I';
+						if ((strspn(ref_allele, "ACGT") == ref_allele_length) && ((strspn(nonref_allele, "ACGT") == nonref_allele_length))) {
+							if (ref_allele_length > nonref_allele_length) {
+								log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "I", "R");
+								tokens[ref_allele_column_pos][0] = 'I';
+								tokens[ref_allele_column_pos][1] = '\0';
+								tokens[nonref_allele_column_pos][0] = 'R';
+								tokens[nonref_allele_column_pos][1] = '\0';
+							} else if (ref_allele_length < nonref_allele_length) {
+								log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "R", "I");
+								tokens[ref_allele_column_pos][0] = 'R';
+								tokens[ref_allele_column_pos][1] = '\0';
+								tokens[nonref_allele_column_pos][0] = 'I';
+								tokens[nonref_allele_column_pos][1] = '\0';
+							} else {
+								log_writer->write("Line %u: (WARNING) Alleles of %s don't match the specified variation type.\n", line_number, tokens[id_column_pos]);
+								if (!drop) write_columns();
+								continue;
+							}
+						} else if (((auxiliary::strcmp_ignore_case(ref_allele, "I") != 0) || (auxiliary::strcmp_ignore_case(nonref_allele, "R") != 0)) &&
+									((auxiliary::strcmp_ignore_case(ref_allele, "R") != 0) || (auxiliary::strcmp_ignore_case(nonref_allele, "I") != 0))) {
+							log_writer->write("Line %u: (WARNING) Alleles of %s don't match the specified variation type.\n", line_number, tokens[id_column_pos]);
+							if (!drop) write_columns();
+							continue;
+						}
+					}
+				}
+
+				if (query_position.type == '\0') {
+					// CHR:POS:SOMETHING_ELSE or CHR:POS
+					if (((auxiliary::strcmp_ignore_case(ref_allele, "A") == 0) || (auxiliary::strcmp_ignore_case(ref_allele, "C") == 0) ||
+						(auxiliary::strcmp_ignore_case(ref_allele, "G") == 0) || (auxiliary::strcmp_ignore_case(ref_allele, "T") == 0)) &&
+						((auxiliary::strcmp_ignore_case(nonref_allele, "A") == 0) || (auxiliary::strcmp_ignore_case(nonref_allele, "C") == 0) ||
+							(auxiliary::strcmp_ignore_case(nonref_allele, "G") == 0) || (auxiliary::strcmp_ignore_case(nonref_allele, "T") == 0))) {
+						query_position.type = 'S';
+					} else if (((auxiliary::strcmp_ignore_case(ref_allele, "D") == 0) && (auxiliary::strcmp_ignore_case(nonref_allele, "R") == 0)) ||
+								((auxiliary::strcmp_ignore_case(ref_allele, "R") == 0) && (auxiliary::strcmp_ignore_case(nonref_allele, "D") == 0))) {
+						query_position.type = 'I';
+					} else if (((auxiliary::strcmp_ignore_case(ref_allele, "I") == 0) && (auxiliary::strcmp_ignore_case(nonref_allele, "R") == 0)) ||
+								((auxiliary::strcmp_ignore_case(ref_allele, "R") == 0) && (auxiliary::strcmp_ignore_case(nonref_allele, "I") == 0))) {
+						query_position.type = 'I';
+					} else {
+						query_position.type = 'I';
+
+						if (auxiliary::strcmp_ignore_case(ref_allele, nonref_allele) == 0) {
+							log_writer->write("Line %u: (WARNING) Alleles of %s don't match the specified variation type.\n", line_number, tokens[id_column_pos]);
+							if (!drop) write_columns();
+							continue;
+						}
+
+						if ((ref_allele_length == nonref_allele_length) || (strspn(ref_allele, "ACGT") != ref_allele_length) || (strspn(nonref_allele, "ACGT") != nonref_allele_length)) {
+							log_writer->write("Line %u: (WARNING) Alleles of %s don't match the specified variation type.\n", line_number, tokens[id_column_pos]);
+							if (!drop) write_columns();
+							continue;
+						}
+
+						recode_alleles = true;
+					}
+				}
+
+				found_position_index_entry_pos = found_position - position_index;
+
+				if (recode_alleles) {
+					position = found_position_index_entry_pos;
+					while ((position >= 0) && (qsort_position_index_entry_cmp(&(position_index[position]), &query_position) == 0)) {
+						if (position_index[position].type == query_position.type) {
+							consistent_type = true;
+
+							if ((auxiliary::strcmp_ignore_case(position_index[position].ref_allele, ref_allele) == 0) &&
+									(auxiliary::strcmp_ignore_case(position_index[position].nonref_allele, nonref_allele) == 0)) {
+								consistent_alleles = true;
+
+								if (ref_allele_length > nonref_allele_length) {
+									log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "R", "D");
+									tokens[ref_allele_column_pos][0] = 'R';
+									tokens[ref_allele_column_pos][1] = '\0';
+									tokens[nonref_allele_column_pos][0] = 'D';
+									tokens[nonref_allele_column_pos][1] = '\0';
+								} else if (ref_allele_length < nonref_allele_length) {
+									log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "R", "I");
+									tokens[ref_allele_column_pos][0] = 'R';
+									tokens[ref_allele_column_pos][1] = '\0';
+									tokens[nonref_allele_column_pos][0] = 'I';
+									tokens[nonref_allele_column_pos][1] = '\0';
+								}
+
+								break;
+							} else if ((auxiliary::strcmp_ignore_case(position_index[position].ref_allele, nonref_allele) == 0) &&
+									(auxiliary::strcmp_ignore_case(position_index[position].nonref_allele, ref_allele) == 0)) {
+								consistent_alleles = true;
+
+								if (ref_allele_length > nonref_allele_length) {
+									log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "I", "R");
+									tokens[ref_allele_column_pos][0] = 'I';
+									tokens[ref_allele_column_pos][1] = '\0';
+									tokens[nonref_allele_column_pos][0] = 'R';
+									tokens[nonref_allele_column_pos][1] = '\0';
+								} else if (ref_allele_length < nonref_allele_length) {
+									log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "D", "R");
+									tokens[ref_allele_column_pos][0] = 'D';
+									tokens[ref_allele_column_pos][1] = '\0';
+									tokens[nonref_allele_column_pos][0] = 'R';
+									tokens[nonref_allele_column_pos][1] = '\0';
+								}
+
+								break;
+							}
+						}
+						--position;
+					}
+
+					if (!consistent_type) {
+						position = found_position_index_entry_pos;
+						++position;
+						while ((position < index_size) && (qsort_position_index_entry_cmp(&(position_index[position]), &query_position) == 0)) {
+							if (position_index[position].type == query_position.type) {
+								consistent_type = true;
+
+								if ((auxiliary::strcmp_ignore_case(position_index[position].ref_allele, ref_allele) == 0) &&
+										(auxiliary::strcmp_ignore_case(position_index[position].nonref_allele, nonref_allele) == 0)) {
+									consistent_alleles = true;
+
+									if (ref_allele_length > nonref_allele_length) {
+										log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "R", "D");
+										tokens[ref_allele_column_pos][0] = 'R';
+										tokens[ref_allele_column_pos][1] = '\0';
+										tokens[nonref_allele_column_pos][0] = 'D';
+										tokens[nonref_allele_column_pos][1] = '\0';
+									} else if (ref_allele_length < nonref_allele_length) {
+										log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "R", "I");
+										tokens[ref_allele_column_pos][0] = 'R';
+										tokens[ref_allele_column_pos][1] = '\0';
+										tokens[nonref_allele_column_pos][0] = 'I';
+										tokens[nonref_allele_column_pos][1] = '\0';
+									}
+
+									break;
+								} else if ((auxiliary::strcmp_ignore_case(position_index[position].ref_allele, nonref_allele) == 0) &&
+										(auxiliary::strcmp_ignore_case(position_index[position].nonref_allele, ref_allele) == 0)) {
+									consistent_alleles = true;
+
+									if (ref_allele_length > nonref_allele_length) {
+										log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "I", "R");
+										tokens[ref_allele_column_pos][0] = 'I';
+										tokens[ref_allele_column_pos][1] = '\0';
+										tokens[nonref_allele_column_pos][0] = 'R';
+										tokens[nonref_allele_column_pos][1] = '\0';
+									} else if (ref_allele_length < nonref_allele_length) {
+										log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "D", "R");
+										tokens[ref_allele_column_pos][0] = 'D';
+										tokens[ref_allele_column_pos][1] = '\0';
+										tokens[nonref_allele_column_pos][0] = 'R';
+										tokens[nonref_allele_column_pos][1] = '\0';
+									}
+
+									break;
+								}
+							}
+							++position;
+						}
+					}
+
+					if (!consistent_type) {
+						log_writer->write("Line %u: (WARNING) Type of %s doesn't match type in the map.\n", line_number, tokens[id_column_pos]);
+						if (!drop) write_columns();
+						continue;
+					}
+
+					if (!consistent_alleles) {
+						log_writer->write("Line %u: (WARNING) Alleles of %s don't match alleles in the map.\n", line_number, tokens[id_column_pos]);
+						if (!drop) write_columns();
+						continue;
 					}
 				} else {
-					log_writer->write("Line %u (WARNING): %s wasn't found in the map.\n", line_number, tokens[id_column_pos]);
-				}
-				/* END: Check all matches for consistent type. */
-			}
-			/* END: parse and map SNP identifier. */
-
-			/* BEGIN: output new columns. */
-			if (drop) {
-				if (!unresolved) {
-					writer->write("%s", tokens[0]);
-					column_number = 1;
-					while (column_number < file_column_number) {
-						writer->write("\t%s", tokens[column_number]);
-						++column_number;
+					position = found_position_index_entry_pos;
+					while ((position >= 0) && (qsort_position_index_entry_cmp(&(position_index[position]), &query_position) == 0)) {
+						if (position_index[position].type == query_position.type) {
+							consistent_type = true;
+							break;
+						}
+						--position;
 					}
-					writer->write("\n");
 
-					unresolved = true;
+					if (!consistent_type) {
+						position = found_position_index_entry_pos;
+						++position;
+						while ((position < index_size) && (qsort_position_index_entry_cmp(&(position_index[position]), &query_position) == 0)) {
+							if (position_index[position].type == query_position.type) {
+								consistent_type = true;
+								break;
+							}
+							++position;
+						}
+					}
+
+					if (!consistent_type) {
+						log_writer->write("Line %u (WARNING): Type of %s doesn't match type in the map.\n", line_number, tokens[id_column_pos]);
+						if (!drop) write_columns();
+						continue;
+					}
 				}
-			} else {
-				writer->write("%s", tokens[0]);
-				column_number = 1;
-				while (column_number < file_column_number) {
-					writer->write("\t%s", tokens[column_number]);
-					++column_number;
+
+				found_position = &(position_index[position]);
+				if (found_position->type == 'S') {
+					sprintf(buffer, "%s:%lu:%s", tokens[chr_column_pos], found_position->position, VCF_SNP_TYPE);
+				} else {
+					sprintf(buffer, "%s:%lu:%s", tokens[chr_column_pos], found_position->position, VCF_INDEL_TYPE_01);
 				}
-				writer->write("\n");
+
+				if (strcmp(buffer,  tokens[id_column_pos]) != 0) {
+					log_writer->write("Line %u: %s changed to %s.\n", line_number, tokens[id_column_pos], buffer);
+					tokens[id_column_pos] = buffer;
+				}
 			}
-			/* END: output new columns. */
 
-			++line_number;
+			write_columns();
 		}
-
-		writer->close();
-		log_writer->close();
-
-		delete(writer);
-		writer = NULL;
-
-		delete(log_writer);
-		log_writer = NULL;
-
-		free(log_file_name);
-		log_file_name = NULL;
 
 		free(tokens);
 		tokens = NULL;
@@ -1150,46 +1559,527 @@ void Harmonizer::harmonize_with_alleles(const char* output_file_name, bool drop,
 		buffer = NULL;
 
 		if (line_length == 0) {
-			throw HarmonizerException("Harmonizer", "harmonize_with_alleles( const char*, bool )", __LINE__, 13, line_number, file);
+			throw HarmonizerException("Harmonizer", "harmonize( bool )", __LINE__, 13, line_number + 1u, input_file);
 		}
 	} catch (ReaderException &e) {
 		HarmonizerException new_e(e);
-		new_e.add_message("Harmonizer", "harmonize_with_alleles( const char*, bool )", __LINE__, 5, (file != NULL) ? file : "NULL");
+		new_e.add_message("Harmonizer", "harmonize( bool )", __LINE__, 5, (input_file != NULL) ? input_file : "NULL");
 		throw new_e;
 	} catch (WriterException &e) {
 		HarmonizerException new_e(e);
-		new_e.add_message("Harmonizer", "harmonize_with_alleles( const char*, bool )", __LINE__, 5, (file != NULL) ? file : "NULL");
+		new_e.add_message("Harmonizer", "harmonize( bool )", __LINE__, 5, (input_file != NULL) ? input_file : "NULL");
 		throw new_e;
 	} catch (HarmonizerException &e) {
-		e.add_message("Harmonizer", "harmonize_with_alleles( const char*, bool )", __LINE__, 5, (file != NULL) ? file : "NULL");
+		e.add_message("Harmonizer", "harmonize( bool )", __LINE__, 5, (input_file != NULL) ? input_file : "NULL");
 		throw;
 	}
 }
 
-void Harmonizer::harmonize(const char* output_file_name, bool drop, bool gzip) throw (HarmonizerException) {
-	if ((file == NULL) || (reader == NULL) || (id_column == NULL) || (id_column_pos < 0)) {
+void Harmonizer::harmonize_no_vcf_allele_check(bool drop) throw (HarmonizerException) {
+	char* line = NULL;
+	int line_length = 0;
+	unsigned int line_number = 1u;
+
+	char* token = NULL;
+
+	int column_number = 0;
+
+	chr_index* index = NULL;
+	unsigned int index_size = 0u;
+
+	position_index_entry* position_index = NULL;
+	position_index_entry query_position;
+	position_index_entry* found_position = NULL;
+
+	id_index_entry* id_index = NULL;
+	id_index_entry query_id;
+	id_index_entry* found_id = NULL;
+
+	unsigned int found_id_index_entry_pos = 0u;
+	unsigned int found_position_index_entry_pos = 0u;
+	long int position = 0;
+
+	char* ref_allele = NULL;
+	char* nonref_allele = NULL;
+	unsigned int ref_allele_length = 0u;
+	unsigned int nonref_allele_length = 0u;
+
+	char* buffer = NULL;
+	char* buffer_tmp = NULL;
+	unsigned int buffer_tokens_number = 0u;
+	char* buffer_token = NULL;
+	char* buffer_tokens[3u];
+	char* end_ptr = NULL;
+
+	bool empty_ref_allele = false;
+	bool empty_nonref_allele = false;
+	bool consistent_type = false;
+
+	if ((input_file == NULL) || (reader == NULL) ||
+			(output_file == NULL) || (writer == NULL) ||
+			(log_file == NULL) || (log_writer == NULL) ||
+			(chr_column == NULL) || (chr_column_pos < 0) ||
+			(id_column == NULL) || (id_column_pos < 0) ||
+			(ref_allele_column == NULL) || (ref_allele_column_pos < 0) ||
+			(nonref_allele_column == NULL) || (nonref_allele_column_pos < 0)) {
 		return;
 	}
 
-	if ((ref_allele_column != NULL) && (nonref_allele_column != NULL)) {
-		harmonize_with_alleles(output_file_name, drop, gzip);
-	} else {
-		/* Is never called, since alleles columns are mandatory. */
-		harmonize_without_alleles(output_file_name, gzip);
+	try {
+		tokens = (char**)malloc(file_column_number * sizeof(char*));
+		if (tokens == NULL) {
+			throw HarmonizerException("Harmonizer", "harmonize( bool )", __LINE__, 2, file_column_number * sizeof(char*));
+		}
+
+		buffer = (char*)malloc(16777216 * sizeof(char));
+		if (buffer == NULL) {
+			throw HarmonizerException("Harmonizer", "harmonize( bool )", __LINE__, 2, 16777216 * sizeof(char));
+		}
+
+		writer->write("%s\n", header_backup);
+
+		while ((line_length = reader->read_line()) > 0) {
+			line = *(reader->line);
+			++line_number;
+
+			consistent_type = false;
+
+			column_number = 0;
+			while ((token = auxiliary::strtok(&line, separator)) != NULL) {
+				if (column_number < file_column_number) {
+					tokens[column_number] = token;
+				}
+				++column_number;
+			}
+
+			if (column_number < file_column_number) {
+				throw HarmonizerException("Harmonizer", "harmonize( bool )", __LINE__, 14, line_number, input_file, column_number, file_column_number);
+			} else if (column_number > file_column_number) {
+				throw HarmonizerException("Harmonizer", "harmonize( bool )", __LINE__, 15, line_number, input_file, column_number, file_column_number);
+			}
+
+			auxiliary::trim(&(tokens[chr_column_pos]));
+			map_index_by_chr_it = map_index_by_chr.find(tokens[chr_column_pos]);
+			if (map_index_by_chr_it == map_index_by_chr.end()) {
+				log_writer->write("Line %u: (WARNING) Chromosome %s of %s is not in the map.\n", line_number, tokens[chr_column_pos], tokens[id_column_pos]);
+				if (!drop) write_columns();
+				continue;
+			}
+
+			index = map_index_by_chr_it->second;
+			index_size = index->n;
+
+			position_index = index->positions;
+			id_index = index->ids;
+
+			found_id = NULL;
+			found_position = NULL;
+
+			auxiliary::trim(&(tokens[ref_allele_column_pos]));
+			ref_allele = tokens[ref_allele_column_pos];
+			ref_allele_length = strlen(ref_allele);
+
+			auxiliary::trim(&(tokens[nonref_allele_column_pos]));
+			nonref_allele = tokens[nonref_allele_column_pos];
+			nonref_allele_length = strlen(nonref_allele);
+
+			auxiliary::trim(&(tokens[id_column_pos]));
+			if (auxiliary::strcmp_ignore_case(tokens[id_column_pos], "rs", 2) == 0) { // Look up by rsID
+				query_id.id = tokens[id_column_pos];
+				found_id = (id_index_entry*)bsearch(&query_id, id_index, index_size, sizeof(id_index_entry), qsort_id_index_entry_cmp);
+				if (found_id == NULL) {
+					log_writer->write("Line %u: (WARNING) %s is not in the map.\n", line_number, query_id.id);
+					if (!drop) write_columns();
+					continue;
+				}
+
+				if (((auxiliary::strcmp_ignore_case(ref_allele, "A") == 0) || (auxiliary::strcmp_ignore_case(ref_allele, "C") == 0) ||
+					(auxiliary::strcmp_ignore_case(ref_allele, "G") == 0) || (auxiliary::strcmp_ignore_case(ref_allele, "T") == 0)) &&
+					((auxiliary::strcmp_ignore_case(nonref_allele, "A") == 0) || (auxiliary::strcmp_ignore_case(nonref_allele, "C") == 0) ||
+						(auxiliary::strcmp_ignore_case(nonref_allele, "G") == 0) || (auxiliary::strcmp_ignore_case(nonref_allele, "T") == 0))) {
+					query_id.type = 'S';
+				} else if (((auxiliary::strcmp_ignore_case(ref_allele, "D") == 0) && (auxiliary::strcmp_ignore_case(nonref_allele, "R") == 0)) ||
+							((auxiliary::strcmp_ignore_case(ref_allele, "R") == 0) && (auxiliary::strcmp_ignore_case(nonref_allele, "D") == 0))) {
+					query_id.type = 'I';
+				} else if (((auxiliary::strcmp_ignore_case(ref_allele, "I") == 0) && (auxiliary::strcmp_ignore_case(nonref_allele, "R") == 0)) ||
+							((auxiliary::strcmp_ignore_case(ref_allele, "R") == 0) && (auxiliary::strcmp_ignore_case(nonref_allele, "I") == 0))) {
+					query_id.type = 'I';
+				} else {
+					query_id.type = 'I';
+
+					if (auxiliary::strcmp_ignore_case(ref_allele, nonref_allele) == 0) {
+						log_writer->write("Line %u: (WARNING) Alleles of %s don't match the specified variation type.\n", line_number, tokens[id_column_pos]);
+						if (!drop) write_columns();
+						continue;
+					}
+
+					if ((ref_allele_length == nonref_allele_length) || (strspn(ref_allele, "ACGT") != ref_allele_length) || (strspn(nonref_allele, "ACGT") != nonref_allele_length)) {
+						log_writer->write("Line %u: (WARNING) Alleles of %s don't match the specified variation type.\n", line_number, tokens[id_column_pos]);
+						if (!drop) write_columns();
+						continue;
+					}
+				}
+
+				found_id_index_entry_pos = found_id - id_index;
+
+				position = found_id_index_entry_pos;
+				while ((position >= 0) && (qsort_id_index_entry_cmp(&(id_index[position]), &query_id) == 0)) {
+					if (position_index[id_index[position].location].type == query_id.type) {
+						consistent_type = true;
+						break;
+					}
+					--position;
+				}
+
+				if (!consistent_type) {
+					position = found_id_index_entry_pos;
+					++position;
+					while ((position < index_size) && (qsort_id_index_entry_cmp(&(id_index[position]), &query_id) == 0)) {
+						if (position_index[id_index[position].location].type == query_id.type) {
+							consistent_type = true;
+							break;
+						}
+						++position;
+					}
+				}
+
+				if (!consistent_type) {
+					log_writer->write("Line %u: (WARNING) Type of %s doesn't match type in the map.\n", line_number, query_id.id);
+					if (!drop) write_columns();
+					continue;
+				}
+
+				found_position = &(position_index[id_index[position].location]);
+				if (found_position->type == 'S') {
+					sprintf(buffer, "%s:%lu:%s", tokens[chr_column_pos], found_position->position, VCF_SNP_TYPE);
+				} else {
+					sprintf(buffer, "%s:%lu:%s", tokens[chr_column_pos], found_position->position, VCF_INDEL_TYPE_01);
+				}
+				log_writer->write("Line %u: %s changed to %s.\n", line_number, tokens[id_column_pos], buffer);
+				tokens[id_column_pos] = buffer;
+			} else if (auxiliary::strcmp_ignore_case(tokens[id_column_pos], "merged_del", 10) == 0) { // Look up by id
+				query_id.id = tokens[id_column_pos];
+				found_id = (id_index_entry*)bsearch(&query_id, id_index, index_size, sizeof(id_index_entry), qsort_id_index_entry_cmp);
+				if (found_id == NULL) {
+					log_writer->write("Line %u: (WARNING) %s is not in the map.\n", line_number, query_id.id);
+					if (!drop) write_columns();
+					continue;
+				}
+
+				if (((auxiliary::strcmp_ignore_case(ref_allele, "D") == 0) && (auxiliary::strcmp_ignore_case(nonref_allele, "R") == 0)) ||
+							((auxiliary::strcmp_ignore_case(ref_allele, "R") == 0) && (auxiliary::strcmp_ignore_case(nonref_allele, "D") == 0))) {
+					query_id.type = 'I';
+				} else {
+					query_id.type = 'I';
+
+					empty_ref_allele = false;
+					empty_nonref_allele = false;
+
+					if ((strcmp(ref_allele, "-") == 0) || (strcmp(ref_allele, ".") == 0) || (auxiliary::strcmp_ignore_case(ref_allele, "NA") == 0)) {
+						empty_ref_allele = true;
+					} else if (strspn(ref_allele, "ACGT") != ref_allele_length) {
+						log_writer->write("Line %u: (WARNING) Alleles of %s don't match the specified variation type.\n", line_number, tokens[id_column_pos]);
+						if (!drop) write_columns();
+						continue;
+					}
+
+					if ((strcmp(nonref_allele, "-") == 0) || (strcmp(nonref_allele, ".") == 0) || (auxiliary::strcmp_ignore_case(nonref_allele, "NA") == 0)) {
+						empty_nonref_allele = true;
+					} else if (strspn(nonref_allele, "ACGT") != nonref_allele_length) {
+						log_writer->write("Line %u: (WARNING) Alleles of %s don't match the specified variation type.\n", line_number, tokens[id_column_pos]);
+						if (!drop) write_columns();
+						continue;
+					}
+
+					if (empty_ref_allele && empty_nonref_allele) {
+						log_writer->write("Line %u: (WARNING) Alleles of %s don't match the specified variation type.\n", line_number, tokens[id_column_pos]);
+						if (!drop) write_columns();
+						continue;
+					}
+
+					if (!empty_ref_allele && !empty_nonref_allele && (ref_allele_length == nonref_allele_length)) {
+						log_writer->write("Line %u: (WARNING) Alleles of %s don't match the specified variation type.\n", line_number, tokens[id_column_pos]);
+						if (!drop) write_columns();
+						continue;
+					}
+
+					if (empty_ref_allele) {
+						log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "D", "R");
+						tokens[ref_allele_column_pos][0] = 'D';
+						tokens[ref_allele_column_pos][1] = '\0';
+						tokens[nonref_allele_column_pos][0] = 'R';
+						tokens[nonref_allele_column_pos][1] = '\0';
+					} else if (empty_nonref_allele) {
+						log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "R", "D");
+						tokens[ref_allele_column_pos][0] = 'R';
+						tokens[ref_allele_column_pos][1] = '\0';
+						tokens[nonref_allele_column_pos][0] = 'D';
+						tokens[nonref_allele_column_pos][1] = '\0';
+					} else if (ref_allele_length > nonref_allele_length) {
+						log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "R", "D");
+						tokens[ref_allele_column_pos][0] = 'R';
+						tokens[ref_allele_column_pos][1] = '\0';
+						tokens[nonref_allele_column_pos][0] = 'D';
+						tokens[nonref_allele_column_pos][1] = '\0';
+					} else if (ref_allele_length < nonref_allele_length) {
+						log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "D", "R");
+						tokens[ref_allele_column_pos][0] = 'D';
+						tokens[ref_allele_column_pos][1] = '\0';
+						tokens[nonref_allele_column_pos][0] = 'R';
+						tokens[nonref_allele_column_pos][1] = '\0';
+					} else {
+						log_writer->write("Line %u: (WARNING) Alleles of %s don't match the specified variation type.\n", line_number, tokens[id_column_pos]);
+						if (!drop) write_columns();
+						continue;
+					}
+				}
+
+				found_id_index_entry_pos = found_id - id_index;
+
+				position = found_id_index_entry_pos;
+				while ((position >= 0) && (qsort_id_index_entry_cmp(&(id_index[position]), &query_id) == 0)) {
+					if (position_index[id_index[position].location].type == query_id.type) {
+						consistent_type = true;
+						break;
+					}
+					--position;
+				}
+
+				if (!consistent_type) {
+					position = found_id_index_entry_pos;
+					++position;
+					while ((position < index_size) && (qsort_id_index_entry_cmp(&(id_index[position]), &query_id) == 0)) {
+						if (position_index[id_index[position].location].type == query_id.type) {
+							consistent_type = true;
+							break;
+						}
+						++position;
+					}
+				}
+
+				if (!consistent_type) {
+					log_writer->write("Line %u: (WARNING) Type of %s doesn't match type in the map.\n", line_number, query_id.id);
+					if (!drop) write_columns();
+					continue;
+				}
+
+				found_position = &(position_index[id_index[position].location]);
+				if (found_position->type == 'S') {
+					sprintf(buffer, "%s:%lu:%s", tokens[chr_column_pos], found_position->position, VCF_SNP_TYPE);
+				} else {
+					sprintf(buffer, "%s:%lu:%s", tokens[chr_column_pos], found_position->position, VCF_INDEL_TYPE_01);
+				}
+				log_writer->write("Line %u: %s changed to %s.\n", line_number, tokens[id_column_pos], buffer);
+				tokens[id_column_pos] = buffer;
+			} else { // Look up by position
+				strcpy(buffer, tokens[id_column_pos]);
+				buffer_tmp = buffer;
+
+				buffer_tokens_number = 0u;
+				buffer_tokens[0u] = buffer_tokens[1u] = buffer_tokens[2u] = NULL;
+				while ((buffer_tokens_number < 3u) && ((buffer_token = auxiliary::strtok(&buffer_tmp, ':')) != NULL)) {
+					buffer_tokens[buffer_tokens_number++] = buffer_token;
+				}
+
+				if ((buffer_tokens_number < 2u) || (buffer_tokens_number > 3u)) {
+					log_writer->write("Line %u: (WARNING) %s identifier doesn't follow CHR:POS, CHR:POS:TYPE, or rsID formats.\n", line_number, tokens[id_column_pos]);
+					if (!drop) write_columns();
+					continue;
+				}
+
+				query_position.position = strtoul(buffer_tokens[1u], &end_ptr, 10);
+				if (end_ptr == buffer_tokens[1u]) {
+					log_writer->write("Line %u: (WARNING) Position of %s can't be parsed to integer.\n", line_number, tokens[id_column_pos]);
+					if (!drop) write_columns();
+					continue;
+				}
+
+				found_position = (position_index_entry*)bsearch(&query_position, position_index, index_size, sizeof(position_index_entry), qsort_position_index_entry_cmp);
+				if (found_position == NULL) {
+					log_writer->write("Line %u: (WARNING) %s is not in the map.\n", line_number, tokens[id_column_pos]);
+					if (!drop) write_columns();
+					continue;
+				}
+
+				query_position.type = '\0';
+				if (buffer_tokens[2u] != NULL) {
+					if (auxiliary::strcmp_ignore_case(buffer_tokens[2u], VCF_SNP_TYPE) == 0) {
+						//CHR:POS:SNP
+						query_position.type = 'S';
+						if (((auxiliary::strcmp_ignore_case(ref_allele, "A") != 0) && (auxiliary::strcmp_ignore_case(ref_allele, "C") != 0) &&
+								(auxiliary::strcmp_ignore_case(ref_allele, "G") != 0) && (auxiliary::strcmp_ignore_case(ref_allele, "T") != 0)) ||
+								((auxiliary::strcmp_ignore_case(nonref_allele, "A") != 0) && (auxiliary::strcmp_ignore_case(nonref_allele, "C") != 0) &&
+										(auxiliary::strcmp_ignore_case(nonref_allele, "G") != 0) && (auxiliary::strcmp_ignore_case(nonref_allele, "T") != 0))) {
+							log_writer->write("Line %u: (WARNING) Alleles of %s don't match the specified variation type.\n", line_number, tokens[id_column_pos]);
+							if (!drop) write_columns();
+							continue;
+						}
+					} else if (auxiliary::strcmp_ignore_case(buffer_tokens[2u], "D") == 0) {
+						//CHR:POS:D
+						query_position.type = 'I';
+						if ((strspn(ref_allele, "ACGT") == ref_allele_length) && ((strspn(nonref_allele, "ACGT") == nonref_allele_length))) {
+							if (ref_allele_length > nonref_allele_length) {
+								log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "R", "D");
+								tokens[ref_allele_column_pos][0] = 'R';
+								tokens[ref_allele_column_pos][1] = '\0';
+								tokens[nonref_allele_column_pos][0] = 'D';
+								tokens[nonref_allele_column_pos][1] = '\0';
+							} else if (ref_allele_length < nonref_allele_length) {
+								log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "D", "R");
+								tokens[ref_allele_column_pos][0] = 'D';
+								tokens[ref_allele_column_pos][1] = '\0';
+								tokens[nonref_allele_column_pos][0] = 'R';
+								tokens[nonref_allele_column_pos][1] = '\0';
+							} else {
+								log_writer->write("Line %u: (WARNING) Alleles of %s don't match the specified variation type.\n", line_number, tokens[id_column_pos]);
+								if (!drop) write_columns();
+								continue;
+							}
+						} else if (((auxiliary::strcmp_ignore_case(ref_allele, "D") != 0) || (auxiliary::strcmp_ignore_case(nonref_allele, "R") != 0)) &&
+									((auxiliary::strcmp_ignore_case(ref_allele, "R") != 0) || (auxiliary::strcmp_ignore_case(nonref_allele, "D") != 0))) {
+							log_writer->write("Line %u: (WARNING) Alleles of %s don't match the specified variation type.\n", line_number, tokens[id_column_pos]);
+							if (!drop) write_columns();
+							continue;
+						}
+					} else if (auxiliary::strcmp_ignore_case(buffer_tokens[2u], "I") == 0) {
+						//CHR:POS:I
+						query_position.type = 'I';
+						if ((strspn(ref_allele, "ACGT") == ref_allele_length) && ((strspn(nonref_allele, "ACGT") == nonref_allele_length))) {
+							if (ref_allele_length > nonref_allele_length) {
+								log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "I", "R");
+								tokens[ref_allele_column_pos][0] = 'I';
+								tokens[ref_allele_column_pos][1] = '\0';
+								tokens[nonref_allele_column_pos][0] = 'R';
+								tokens[nonref_allele_column_pos][1] = '\0';
+							} else if (ref_allele_length < nonref_allele_length) {
+								log_writer->write("Line %u: Alleles %s/%s of %s changed to %s/%s.\n", line_number, ref_allele, nonref_allele, tokens[id_column_pos], "R", "I");
+								tokens[ref_allele_column_pos][0] = 'R';
+								tokens[ref_allele_column_pos][1] = '\0';
+								tokens[nonref_allele_column_pos][0] = 'I';
+								tokens[nonref_allele_column_pos][1] = '\0';
+							} else {
+								log_writer->write("Line %u: (WARNING) Alleles of %s don't match the specified variation type.\n", line_number, tokens[id_column_pos]);
+								if (!drop) write_columns();
+								continue;
+							}
+						} else if (((auxiliary::strcmp_ignore_case(ref_allele, "I") != 0) || (auxiliary::strcmp_ignore_case(nonref_allele, "R") != 0)) &&
+									((auxiliary::strcmp_ignore_case(ref_allele, "R") != 0) || (auxiliary::strcmp_ignore_case(nonref_allele, "I") != 0))) {
+							log_writer->write("Line %u: (WARNING) Alleles of %s don't match the specified variation type.\n", line_number, tokens[id_column_pos]);
+							if (!drop) write_columns();
+							continue;
+						}
+					}
+				}
+
+				if (query_position.type == '\0') {
+					// CHR:POS:SOMETHING_ELSE or CHR:POS
+					if (((auxiliary::strcmp_ignore_case(ref_allele, "A") == 0) || (auxiliary::strcmp_ignore_case(ref_allele, "C") == 0) ||
+						(auxiliary::strcmp_ignore_case(ref_allele, "G") == 0) || (auxiliary::strcmp_ignore_case(ref_allele, "T") == 0)) &&
+						((auxiliary::strcmp_ignore_case(nonref_allele, "A") == 0) || (auxiliary::strcmp_ignore_case(nonref_allele, "C") == 0) ||
+							(auxiliary::strcmp_ignore_case(nonref_allele, "G") == 0) || (auxiliary::strcmp_ignore_case(nonref_allele, "T") == 0))) {
+						query_position.type = 'S';
+					} else if (((auxiliary::strcmp_ignore_case(ref_allele, "D") == 0) && (auxiliary::strcmp_ignore_case(nonref_allele, "R") == 0)) ||
+								((auxiliary::strcmp_ignore_case(ref_allele, "R") == 0) && (auxiliary::strcmp_ignore_case(nonref_allele, "D") == 0))) {
+						query_position.type = 'I';
+					} else if (((auxiliary::strcmp_ignore_case(ref_allele, "I") == 0) && (auxiliary::strcmp_ignore_case(nonref_allele, "R") == 0)) ||
+								((auxiliary::strcmp_ignore_case(ref_allele, "R") == 0) && (auxiliary::strcmp_ignore_case(nonref_allele, "I") == 0))) {
+						query_position.type = 'I';
+					} else {
+						query_position.type = 'I';
+
+						if (auxiliary::strcmp_ignore_case(ref_allele, nonref_allele) == 0) {
+							log_writer->write("Line %u: (WARNING) Alleles of %s don't match the specified variation type.\n", line_number, tokens[id_column_pos]);
+							if (!drop) write_columns();
+							continue;
+						}
+
+						if ((ref_allele_length == nonref_allele_length) || (strspn(ref_allele, "ACGT") != ref_allele_length) || (strspn(nonref_allele, "ACGT") != nonref_allele_length)) {
+							log_writer->write("Line %u: (WARNING) Alleles of %s don't match the specified variation type.\n", line_number, tokens[id_column_pos]);
+							if (!drop) write_columns();
+							continue;
+						}
+					}
+				}
+
+				found_position_index_entry_pos = found_position - position_index;
+
+				position = found_position_index_entry_pos;
+				while ((position >= 0) && (qsort_position_index_entry_cmp(&(position_index[position]), &query_position) == 0)) {
+					if (position_index[position].type == query_position.type) {
+						consistent_type = true;
+						break;
+					}
+					--position;
+				}
+
+				if (!consistent_type) {
+					position = found_position_index_entry_pos;
+					++position;
+					while ((position < index_size) && (qsort_position_index_entry_cmp(&(position_index[position]), &query_position) == 0)) {
+						if (position_index[position].type == query_position.type) {
+							consistent_type = true;
+							break;
+						}
+						++position;
+					}
+				}
+
+				if (!consistent_type) {
+					log_writer->write("Line %u (WARNING): Type of %s doesn't match type in the map.\n", line_number, tokens[id_column_pos]);
+					if (!drop) write_columns();
+					continue;
+				}
+
+				found_position = &(position_index[position]);
+				if (found_position->type == 'S') {
+					sprintf(buffer, "%s:%lu:%s", tokens[chr_column_pos], found_position->position, VCF_SNP_TYPE);
+				} else {
+					sprintf(buffer, "%s:%lu:%s", tokens[chr_column_pos], found_position->position, VCF_INDEL_TYPE_01);
+				}
+
+				if (strcmp(buffer,  tokens[id_column_pos]) != 0) {
+					log_writer->write("Line %u: %s changed to %s.\n", line_number, tokens[id_column_pos], buffer);
+					tokens[id_column_pos] = buffer;
+				}
+			}
+
+			write_columns();
+		}
+
+		free(tokens);
+		tokens = NULL;
+
+		free(buffer);
+		buffer = NULL;
+
+		if (line_length == 0) {
+			throw HarmonizerException("Harmonizer", "harmonize( bool )", __LINE__, 13, line_number + 1u, input_file);
+		}
+	} catch (ReaderException &e) {
+		HarmonizerException new_e(e);
+		new_e.add_message("Harmonizer", "harmonize( bool )", __LINE__, 5, (input_file != NULL) ? input_file : "NULL");
+		throw new_e;
+	} catch (WriterException &e) {
+		HarmonizerException new_e(e);
+		new_e.add_message("Harmonizer", "harmonize( bool )", __LINE__, 5, (input_file != NULL) ? input_file : "NULL");
+		throw new_e;
+	} catch (HarmonizerException &e) {
+		e.add_message("Harmonizer", "harmonize( bool )", __LINE__, 5, (input_file != NULL) ? input_file : "NULL");
+		throw;
 	}
 }
 
-inline int Harmonizer::qsort_map_index_entry_cmp(const void* first, const void* second) {
-	map_index_entry* first_entry = (map_index_entry*)first;
-	map_index_entry* second_entry = ((map_index_entry*)second);
+inline int Harmonizer::qsort_position_index_entry_cmp(const void* first, const void* second) {
+	position_index_entry* first_entry = (position_index_entry*)first;
+	position_index_entry* second_entry = (position_index_entry*)second;
 
 	if (first_entry->position > second_entry->position) {
 		return 1;
 	} else if (first_entry->position < second_entry->position) {
 		return -1;
-	} else {
-		return auxiliary::strcmp_ignore_case(first_entry->chromosome, second_entry->chromosome);
 	}
+
+	return 0;
 }
 
 inline int Harmonizer::qsort_id_index_entry_cmp(const void* first, const void* second) {

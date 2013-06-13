@@ -67,11 +67,11 @@ const char* Column::get_header() {
 	return header;
 }
 
-void Column::set_value(char* value) {
+void Column::set_value(const char* value) {
 	char_value = value;
 }
 
-char* Column::get_value() {
+const char* Column::get_value() {
 	return char_value;
 }
 

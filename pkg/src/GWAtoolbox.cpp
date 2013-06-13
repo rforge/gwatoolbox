@@ -30,6 +30,7 @@
 #include "gwasformat/include/formatter/Formatter.h"
 #include "annotation/include/Annotator.h"
 #include "harmonization/include/Harmonizer.h"
+#include "harmonization/include/Harmonizer2.h"
 #include "independization/include/Selector.h"
 
 /* Define LINUX flag for compilation under Linux */
@@ -1312,14 +1313,16 @@ SEXP perform_annotation(SEXP external_descriptor_pointer) {
 	return R_NilValue;
 }
 
-SEXP perform_id_harmonization(SEXP input_file_name, SEXP output_file_name, SEXP map_file_name, SEXP id_column_name, SEXP allele_column_names, SEXP separator, SEXP drop, SEXP gzip) {
+SEXP perform_harmonization(SEXP input_file_name, SEXP output_file_name, SEXP map_file_name, SEXP chr_column_name, SEXP id_column_name, SEXP allele_column_names, SEXP separator, SEXP vcf_alleles, SEXP drop, SEXP gzip) {
 	const char* c_input_file_name = NULL;
 	const char* c_output_file_name = NULL;
 	const char* c_map_file_name = NULL;
+	const char* c_chr_column_name = NULL;
 	const char* c_id_column_name = NULL;
 	const char* c_ref_allele_column_name = NULL;
 	const char* c_nonref_allele_column_name = NULL;
 	const char* c_separator = NULL;
+	int c_vcf_alleles = 0;
 	int c_drop = 0;
 	int c_gzip = 0;
 
@@ -1384,6 +1387,27 @@ SEXP perform_id_harmonization(SEXP input_file_name, SEXP output_file_name, SEXP 
 	c_map_file_name = CHAR(STRING_ELT(map_file_name, 0));
 	if ((strlen(c_map_file_name) <= 0) || (strspn(c_map_file_name, " \t") == strlen(c_map_file_name))) {
 		error("\nThe input file name is blank.");
+	}
+
+	if (chr_column_name == R_NilValue) {
+		error("\nThe chromosome column name is NULL.");
+	}
+
+	if (!isString(chr_column_name)) {
+		error("\nThe chromosome column name is not a string.");
+	}
+
+	if (length(chr_column_name) <= 0) {
+		error("\nThe chromosome column name is empty.");
+	}
+
+	if (length(chr_column_name) > 1) {
+		error("\nThe chromosome column name has multiple values.");
+	}
+
+	c_chr_column_name = CHAR(STRING_ELT(chr_column_name, 0));
+	if ((strlen(c_chr_column_name) <= 0) || (strspn(c_chr_column_name, " \t") == strlen(c_chr_column_name))) {
+		error("\nThe chromosome column name is blank.");
 	}
 
 	if (id_column_name == R_NilValue) {
@@ -1468,6 +1492,24 @@ SEXP perform_id_harmonization(SEXP input_file_name, SEXP output_file_name, SEXP 
 
 	c_drop = LOGICAL(drop)[0];
 
+	if (vcf_alleles == R_NilValue) {
+		error("\nThe 'vcf_alleles' argument is NULL.");
+	}
+
+	if (!isLogical(vcf_alleles)) {
+		error("\nThe 'vcf_alleles' argument is not logical.");
+	}
+
+	if (length(vcf_alleles) <= 0) {
+		error("\nThe 'vcf_alleles' argument is empty.");
+	}
+
+	if (length(vcf_alleles) > 1) {
+		error("\nThe 'vcf_alleles' argument has multiple values.");
+	}
+
+	c_vcf_alleles = LOGICAL(vcf_alleles)[0];
+
 	if (gzip == R_NilValue) {
 		error("\nThe 'gzip' argument is NULL.");
 	}
@@ -1489,13 +1531,305 @@ SEXP perform_id_harmonization(SEXP input_file_name, SEXP output_file_name, SEXP 
 	try {
 		Harmonizer harmonizer;
 
-		harmonizer.open_file(c_input_file_name, c_id_column_name, c_ref_allele_column_name, c_nonref_allele_column_name, c_separator[0u]);
+		harmonizer.open_input_file(c_input_file_name, c_chr_column_name, c_id_column_name, c_ref_allele_column_name, c_nonref_allele_column_name, c_separator[0u]);
+		harmonizer.open_output_file(c_output_file_name, c_gzip);
+		harmonizer.open_log_file(c_output_file_name, c_gzip);
 
 		harmonizer.process_header();
-		harmonizer.index_map(c_map_file_name);
-		harmonizer.harmonize(c_output_file_name, c_drop, c_gzip);
 
-		harmonizer.close_file();
+		harmonizer.index_map(c_map_file_name);
+
+		if (c_vcf_alleles) {
+			harmonizer.harmonize(c_drop);
+		} else {
+			harmonizer.harmonize_no_vcf_allele_check(c_drop);
+		}
+
+		harmonizer.close_input_file();
+		harmonizer.close_output_file();
+		harmonizer.close_log_file();
+	} catch (Exception &e) {
+		error("\n%s", e.what());
+	}
+
+	return R_NilValue;
+}
+
+SEXP perform_harmonization_by_pos(SEXP input_file_name, SEXP output_file_name, SEXP vcf_file_name, SEXP id_column_name, SEXP chr_column_name, SEXP pos_column_name, SEXP allele_column_names, SEXP flip, SEXP separator, SEXP drop, SEXP gzip) {
+	const char* c_input_file_name = NULL;
+	const char* c_output_file_name = NULL;
+	const char* c_vcf_file_name = NULL;
+	const char* c_id_column_name = NULL;
+	const char* c_chr_column_name = NULL;
+	const char* c_pos_column_name = NULL;
+	const char* c_first_allele_column_name = NULL;
+	const char* c_second_allele_column_name = NULL;
+	int c_flip = 0;
+	const char* c_separator = NULL;
+	int c_drop = 0;
+	int c_gzip = 0;
+
+	/* BEGIN: input file name */
+	if (input_file_name == R_NilValue) {
+		error("\nThe input file name is NULL.");
+	}
+
+	if (!isString(input_file_name)) {
+		error("\nThe input file name is not a string.");
+	}
+
+	if (length(input_file_name) <= 0) {
+		error("\nThe input file name is empty.");
+	}
+
+	if (length(input_file_name) > 1) {
+		error("\nThe input file name has multiple values.");
+	}
+
+	c_input_file_name = CHAR(STRING_ELT(input_file_name, 0));
+	if ((strlen(c_input_file_name) <= 0) || (strspn(c_input_file_name, " \t") == strlen(c_input_file_name))) {
+		error("\nThe input file name is blank.");
+	}
+	/* END: input file name */
+
+	/* BEGIN: output file name */
+	if (output_file_name == R_NilValue) {
+		error("\nThe output file name is NULL.");
+	}
+
+	if (!isString(output_file_name)) {
+		error("\nThe output file name is not a string.");
+	}
+
+	if (length(output_file_name) <= 0) {
+		error("\nThe output file name is empty.");
+	}
+
+	if (length(output_file_name) > 1) {
+		error("\nThe output file name has multiple values.");
+	}
+
+	c_output_file_name = CHAR(STRING_ELT(output_file_name, 0));
+	if ((strlen(c_output_file_name) <= 0) || (strspn(c_output_file_name, " \t") == strlen(c_output_file_name))) {
+		error("\nThe input file name is blank.");
+	}
+	/* END: output file name */
+
+	/* BEGIN: VCF file name */
+	if (vcf_file_name == R_NilValue) {
+		error("\nThe VCF file name is NULL.");
+	}
+
+	if (!isString(vcf_file_name)) {
+		error("\nThe VCF file name is not a string.");
+	}
+
+	if (length(vcf_file_name) <= 0) {
+		error("\nThe VCF file name is empty.");
+	}
+
+	if (length(vcf_file_name) > 1) {
+		error("\nThe VCF file name has multiple values.");
+	}
+
+	c_vcf_file_name = CHAR(STRING_ELT(vcf_file_name, 0));
+	if ((strlen(c_vcf_file_name) <= 0) || (strspn(c_vcf_file_name, " \t") == strlen(c_vcf_file_name))) {
+		error("\nThe VCF file name is blank.");
+	}
+	/* END: VCF file name */
+
+	/* BEGIN: id column name */
+	if (id_column_name == R_NilValue) {
+		error("\nThe SNP ID column name is NULL.");
+	}
+
+	if (!isString(id_column_name)) {
+		error("\nThe SNP ID column name is not a string.");
+	}
+
+	if (length(id_column_name) <= 0) {
+		error("\nThe SNP ID column name is empty.");
+	}
+
+	if (length(id_column_name) > 1) {
+		error("\nThe SNP ID column name has multiple values.");
+	}
+
+	c_id_column_name = CHAR(STRING_ELT(id_column_name, 0));
+	if ((strlen(c_id_column_name) <= 0) || (strspn(c_id_column_name, " \t") == strlen(c_id_column_name))) {
+		error("\nThe SNP ID column name is blank.");
+	}
+	/* END: id column name */
+
+	/* BEGIN: chromosome column name */
+	if (chr_column_name == R_NilValue) {
+		error("\nThe chromosome column name is NULL.");
+	}
+
+	if (!isString(chr_column_name)) {
+		error("\nThe chromosome column name is not a string.");
+	}
+
+	if (length(chr_column_name) <= 0) {
+		error("\nThe chromosome column name is empty.");
+	}
+
+	if (length(chr_column_name) > 1) {
+		error("\nThe chromosome column name has multiple values.");
+	}
+
+	c_chr_column_name = CHAR(STRING_ELT(chr_column_name, 0));
+	if ((strlen(c_chr_column_name) <= 0) || (strspn(c_chr_column_name, " \t") == strlen(c_chr_column_name))) {
+		error("\nThe chromosome column name is blank.");
+	}
+	/* END: chromosome column name */
+
+	/* BEGIN: chromosomal position column name */
+	if (pos_column_name == R_NilValue) {
+		error("\nThe chromosomal position column name is NULL.");
+	}
+
+	if (!isString(pos_column_name)) {
+		error("\nThe chromosomal position column name is not a string.");
+	}
+
+	if (length(pos_column_name) <= 0) {
+		error("\nThe chromosomal position column name is empty.");
+	}
+
+	if (length(pos_column_name) > 1) {
+		error("\nThe chromosomal position column name has multiple values.");
+	}
+
+	c_pos_column_name = CHAR(STRING_ELT(pos_column_name, 0));
+	if ((strlen(c_pos_column_name) <= 0) || (strspn(c_pos_column_name, " \t") == strlen(c_pos_column_name))) {
+		error("\nThe chromosomal position column name is blank.");
+	}
+	/* END: chromosomal position column name */
+
+	/* BEGIN: allele column names */
+	if (allele_column_names == R_NilValue) {
+		error("\nThe allele column names argument is NULL.");
+	}
+
+	if (!isString(allele_column_names)) {
+		error("\nThe allele column names must be a character vector.");
+	}
+
+	if (length(allele_column_names) != 2) {
+		error("\nThe allele column names must be a character vector of length 2.");
+	}
+
+	c_first_allele_column_name = CHAR(STRING_ELT(allele_column_names, 0));
+	if ((strlen(c_first_allele_column_name) <= 0) || (strspn(c_first_allele_column_name, " \t") == strlen(c_first_allele_column_name))) {
+		error("\nThe first allele column name is blank.");
+	}
+
+	c_second_allele_column_name = CHAR(STRING_ELT(allele_column_names, 1));
+	if ((strlen(c_second_allele_column_name) <= 0) || (strspn(c_second_allele_column_name, " \t") == strlen(c_second_allele_column_name))) {
+		error("\nThe second allele column name is blank.");
+	}
+	/* END: allele column names */
+
+	/* BEGIN: flip option */
+	if (flip == R_NilValue) {
+		error("\nThe 'flip' argument is NULL.");
+	}
+
+	if (!isLogical(flip)) {
+		error("\nThe 'flip' argument is not logical.");
+	}
+
+	if (length(flip) <= 0) {
+		error("\nThe 'flip' argument is empty.");
+	}
+
+	if (length(flip) > 1) {
+		error("\nThe 'flip' argument has multiple values.");
+	}
+
+	c_flip = LOGICAL(flip)[0];
+	/* END: flip option */
+
+	/* BEGIN: field separator */
+	if (separator == R_NilValue) {
+		error("\nThe field separator character is NULL.");
+	}
+
+	if (!isString(separator)) {
+		error("\nThe field separator is not a character.");
+	}
+
+	if (length(separator) <= 0) {
+		error("\nThe field separator character is empty.");
+	}
+
+	if (length(separator) > 1) {
+		error("\nThe field separator character has multiple values.");
+	}
+
+	c_separator = CHAR(STRING_ELT(separator, 0));
+	if (strlen(c_separator) != 1) {
+		error("\nThe field separator must be a single character.");
+	}
+	/* END: field separator */
+
+	/* BEGIN: drop option */
+	if (drop == R_NilValue) {
+		error("\nThe 'drop' argument is NULL.");
+	}
+
+	if (!isLogical(drop)) {
+		error("\nThe 'drop' argument is not logical.");
+	}
+
+	if (length(drop) <= 0) {
+		error("\nThe 'drop' argument is empty.");
+	}
+
+	if (length(drop) > 1) {
+		error("\nThe 'drop' argument has multiple values.");
+	}
+
+	c_drop = LOGICAL(drop)[0];
+	/* END: drop option */
+
+	/* BEGIN: gzip option */
+	if (gzip == R_NilValue) {
+		error("\nThe 'gzip' argument is NULL.");
+	}
+
+	if (!isLogical(gzip)) {
+		error("\nThe 'gzip' argument is not logical.");
+	}
+
+	if (length(gzip) <= 0) {
+		error("\nThe 'gzip' argument is empty.");
+	}
+
+	if (length(gzip) > 1) {
+		error("\nThe 'gzip' argument has multiple values.");
+	}
+
+	c_gzip = LOGICAL(gzip)[0];
+	/* END: gzip option */
+
+	try {
+		Harmonizer2 harmonizer;
+
+		harmonizer.open_input_file(c_input_file_name, c_id_column_name, c_chr_column_name, c_pos_column_name, c_first_allele_column_name, c_second_allele_column_name, c_separator[0u]);
+		harmonizer.open_output_file(c_output_file_name, c_gzip);
+		harmonizer.open_log_file(c_output_file_name, c_gzip);
+
+		harmonizer.process_header();
+
+		harmonizer.index_vcf(c_vcf_file_name);
+
+		harmonizer.harmonize(c_flip, c_drop);
+
+		harmonizer.close_input_file();
+		harmonizer.close_output_file();
+		harmonizer.close_log_file();
 	} catch (Exception &e) {
 		error("\n%s", e.what());
 	}

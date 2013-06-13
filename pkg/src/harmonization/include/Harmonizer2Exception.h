@@ -17,9 +17,27 @@
  * along with GWAtoolbox.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GWATOOLBOX_H_
-#define GWATOOLBOX_H_
+#ifndef HARMONIZER2EXCEPTION_H_
+#define HARMONIZER2EXCEPTION_H_
 
-#define VERSION	"GWAtoolbox(c) v2.2.4-6"
+#include "../../exception/include/Exception.h"
+
+class Harmonizer2Exception : public Exception {
+private:
+	static const int MESSAGE_TEMPLATES_NUMBER;
+	static const char* MESSAGE_TEMPLATES[];
+
+protected:
+	const char* get_message_template(int message_template_index);
+
+public:
+	Harmonizer2Exception();
+	Harmonizer2Exception(int message_template_index, ... );
+	Harmonizer2Exception(const char* class_name, const char* method_name, int source_line);
+	Harmonizer2Exception(const char* class_name, const char* method_name, int source_line, int message_template_index, ... );
+	Harmonizer2Exception(const Exception& exception);
+
+	virtual ~Harmonizer2Exception() throw();
+};
 
 #endif

@@ -419,11 +419,13 @@ void GwaFile::check_genomiccontrol(Descriptor* descriptor) throw (GwaFileExcepti
 
 	try {
 		inflation_factor = numeric_limits<double>::quiet_NaN();
-		gc_on = false;
 		if ((gc = descriptor->get_property(Descriptor::GENOMICCONTROL)) == NULL) {
 			descriptor->add_property(Descriptor::GENOMICCONTROL, Descriptor::OFF_MODES[0]);
+			gc_on = false;
 		} else if (strcmp_ignore_case(gc, Descriptor::ON_MODES[0]) == 0) {
 			gc_on = true;
+		} else if (strcmp_ignore_case(gc, Descriptor::OFF_MODES[0]) == 0) {
+			gc_on = false;
 		} else {
 			inflation_factor = auxiliary::to_double(gc);
 			gc_on = true;

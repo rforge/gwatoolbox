@@ -654,8 +654,14 @@ void Formatter::format(double lambda, char new_separator, int& n_total, int& n_f
 //						for (columns_it = input_columns.begin(); columns_it != input_columns.end(); (*columns_it)->char_value = auxiliary::strtok(&line, data_separator), columns_it++);
 						for (columns_it = input_columns.begin(); columns_it != input_columns.end(); ++columns_it) {
 							token = auxiliary::strtok(&line, data_separator);
-							auxiliary::trim(&token);
-							(*columns_it)->char_value = token;
+							if (token == NULL) {
+								(*columns_it)->char_value = "";
+							} else {
+								auxiliary::trim(&token);
+								(*columns_it)->char_value = token;
+							}
+//							auxiliary::trim(&token);
+//							(*columns_it)->char_value = token;
 						}
 
 						d_value = maf_column->get_numeric_value();
@@ -687,8 +693,14 @@ void Formatter::format(double lambda, char new_separator, int& n_total, int& n_f
 //						for (columns_it = input_columns.begin(); columns_it != input_columns.end(); (*columns_it)->char_value = auxiliary::strtok(&line, data_separator), columns_it++);
 						for (columns_it = input_columns.begin(); columns_it != input_columns.end(); ++columns_it) {
 							token = auxiliary::strtok(&line, data_separator);
-							auxiliary::trim(&token);
-							(*columns_it)->char_value = token;
+							if (token == NULL) {
+								(*columns_it)->char_value = "";
+							} else {
+								auxiliary::trim(&token);
+								(*columns_it)->char_value = token;
+							}
+//							auxiliary::trim(&token);
+//							(*columns_it)->char_value = token;
 						}
 
 						d_value = maf_column->get_numeric_value();
@@ -718,8 +730,14 @@ void Formatter::format(double lambda, char new_separator, int& n_total, int& n_f
 //					for (columns_it = input_columns.begin(); columns_it != input_columns.end(); (*columns_it)->char_value = auxiliary::strtok(&line, data_separator), columns_it++);
 					for (columns_it = input_columns.begin(); columns_it != input_columns.end(); ++columns_it) {
 						token = auxiliary::strtok(&line, data_separator);
-						auxiliary::trim(&token);
-						(*columns_it)->char_value = token;
+						if (token == NULL) {
+							(*columns_it)->char_value = "";
+						} else {
+							auxiliary::trim(&token);
+							(*columns_it)->char_value = token;
+						}
+//						auxiliary::trim(&token);
+//						(*columns_it)->char_value = token;
 					}
 
 					d_value = oevar_imp_column->get_numeric_value();
@@ -747,8 +765,14 @@ void Formatter::format(double lambda, char new_separator, int& n_total, int& n_f
 //					for (columns_it = input_columns.begin(); columns_it != input_columns.end(); (*columns_it)->char_value = auxiliary::strtok(&line, data_separator), columns_it++);
 					for (columns_it = input_columns.begin(); columns_it != input_columns.end(); ++columns_it) {
 						token = auxiliary::strtok(&line, data_separator);
-						auxiliary::trim(&token);
-						(*columns_it)->char_value = token;
+						if (token == NULL) {
+							(*columns_it)->char_value = "";
+						} else {
+							auxiliary::trim(&token);
+							(*columns_it)->char_value = token;
+						}
+//						auxiliary::trim(&token);
+//						(*columns_it)->char_value = token;
 					}
 
 					columns_it = output_columns.begin();

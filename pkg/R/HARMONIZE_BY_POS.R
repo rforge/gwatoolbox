@@ -17,7 +17,7 @@
 # along with GWAtoolbox.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-harmonize_id <- function(input, output, map, id = "markername", alleles = c("ref_allele", "non_ref_allele"), sep = "\t", drop = FALSE, gzip = TRUE) {
+harmonize_by_pos <- function(input, output, vcf, id = "markername", chromosome = "chr", position = "position", alleles = c("first_allele", "second_allele"), flip = TRUE, sep = "\t", drop = FALSE, gzip = TRUE) {
 	if (missing(input)) {
 		stop("The input file name is missing.")
 	}	
@@ -26,8 +26,8 @@ harmonize_id <- function(input, output, map, id = "markername", alleles = c("ref
 		stop("The output file name is missing.")
 	}
 	
-	if (missing(map)) {
-		stop("The map file name is missing.")
+	if (missing(vcf)) {
+		stop("The VCF file name is missing.")
 	}
 	
 	if (is.character(input)) {
@@ -58,14 +58,14 @@ harmonize_id <- function(input, output, map, id = "markername", alleles = c("ref
 		stop("The output file name must be a character string.")
 	}
 	
-	if (is.character(map)) {
-		if (length(map) <= 0) {
+	if (is.character(vcf)) {
+		if (length(vcf) <= 0) {
 			stop("The map file name is empty.")
-		} else if (length(map) > 1) {
+		} else if (length(vcf) > 1) {
 			stop("The map file name has multiple values.")
 		}
-		map <- gsub("^\\s+|\\s+$", "", map)
-		if (nchar(map) <= 0) {
+		vcf <- gsub("^\\s+|\\s+$", "", vcf)
+		if (nchar(vcf) <= 0) {
 			stop("The map file name must be a non-blank character string.")
 		}
 	} else {
@@ -74,16 +74,44 @@ harmonize_id <- function(input, output, map, id = "markername", alleles = c("ref
 	
 	if (is.character(id)) {
 		if (length(id) <= 0) {
-			stop("The SNP ID column name is empty.")
+			stop("The variation ID column name is empty.")
 		} else if (length(id) > 1) {
-			stop("The SNP ID column name has multiple values.")
+			stop("The variation ID column name has multiple values.")
 		}
 		id <- gsub("^\\s+|\\s+$", "", id)
 		if (nchar(id) <= 0) {
-			stop("The SNP ID column name must be a non-blank character string.")
+			stop("The variation ID column name must be a non-blank character string.")
 		}
 	} else {
-		stop("The SNP ID column name must be a character string.")
+		stop("The variation ID column name must be a character string.")
+	}
+	
+	if (is.character(chromosome)) {
+		if (length(chromosome) <= 0) {
+			stop("The chromosome column name is empty.")
+		} else if (length(chromosome) > 1) {
+			stop("The chromosome column name has multiple values.")
+		}
+		chromosome <- gsub("^\\s+|\\s+$", "", chromosome)
+		if (nchar(chromosome) <= 0) {
+			stop("The chromosome column name must be a non-blank character string.")
+		}
+	} else {
+		stop("The chromosome column name must be a character string.")
+	}
+	
+	if (is.character(position)) {
+		if (length(position) <= 0) {
+			stop("The chromosomal position column name is empty.")
+		} else if (length(position) > 1) {
+			stop("The chromosomal position column name has multiple values.")
+		}
+		position <- gsub("^\\s+|\\s+$", "", position)
+		if (nchar(position) <= 0) {
+			stop("The chromosomal position column name must be a non-blank character string.")
+		}
+	} else {
+		stop("The chromosome column name must be a character string.")
 	}
 	
 	if (is.character(alleles)) {
@@ -93,16 +121,26 @@ harmonize_id <- function(input, output, map, id = "markername", alleles = c("ref
 			
 		alleles[1] <- gsub("^\\s+|\\s+$", "", alleles[1])
 		if (nchar(alleles[1]) <= 0) {
-			stop("The reference allele column name must be a non-blank character string.")
+			stop("The first allele column name must be a non-blank character string.")
 		}
 			
 		alleles[2] <- gsub("^\\s+|\\s+$", "", alleles[2])
 		if (nchar(alleles[2]) <= 0) {
-			stop("The non-reference allele column name must be a non-blank character string.")
+			stop("The second allele column name must be a non-blank character string.")
 		}
 			
 	} else {
 		stop("The allele column names must be a character vector.")
+	}
+	
+	if (is.logical(flip)) {
+		if (length(flip) <= 0) {
+			stop("Argument 'flip' is empty.")
+		} else if (length(flip) > 1) {
+			stop("Argument 'flip' has multiple values.")
+		}
+	} else {
+		stop("Argument 'flip' must be a logical.")
 	}
 	
 	if (is.character(sep)) {
@@ -138,5 +176,5 @@ harmonize_id <- function(input, output, map, id = "markername", alleles = c("ref
 		stop("Argument 'gzip' must be a logical.")
 	}
 	
-	result <- .Call("perform_id_harmonization", input, output, map, id, alleles, sep, drop, gzip)
+	result <- .Call("perform_harmonization_by_pos", input, output, vcf, id, chromosome, position, alleles, flip, sep, drop, gzip)
 }

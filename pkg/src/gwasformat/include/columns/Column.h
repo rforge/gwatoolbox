@@ -42,7 +42,7 @@ protected:
 	char* end_ptr;
 
 public:
-	char* char_value;
+	const char* char_value;
 
 	Column();
 	virtual ~Column();
@@ -50,8 +50,8 @@ public:
 	void set_header(const char* header, ... ) throw (ColumnException);
 	const char* get_header();
 
-	void set_value(char* value);
-	char* get_value();
+	void set_value(const char* value);
+	const char* get_value();
 
 	double get_numeric_value();
 
