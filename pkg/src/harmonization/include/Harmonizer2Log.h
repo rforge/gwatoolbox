@@ -17,9 +17,42 @@
  * along with GWAtoolbox.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef GWATOOLBOX_H_
-#define GWATOOLBOX_H_
+#ifndef HARMONIZER2LOG_H_
+#define HARMONIZER2LOG_H_
 
-#define VERSION	"GWAtoolbox(c) v2.2.4-7"
+#include "Harmonizer2Exception.h"
+
+class Harmonizer2Log {
+public:
+	enum warning_type {
+		CHROMOSOME_MISSING,
+		POSITION_MISSING,
+		TYPE_MISMATCH,
+		ALLELE_MISMATCH,
+		STRAND_MISMATCH,
+		BAD_POSITION,
+		BAD_ALLELES
+	};
+
+	enum message_type {
+		STRAND_FLIPPED,
+		ALLELES_CHANGED,
+		ID_CHANGED
+	};
+
+	static const int N_WARNING_TYPES;
+	static const char* warnings[];
+	static const int N_MESSAGE_TYPES;
+	static const char* messages[];
+
+	unsigned int* warning_counts;
+	unsigned int* message_counts;
+
+	Harmonizer2Log() throw (Harmonizer2Exception);
+	virtual ~Harmonizer2Log();
+
+	void add_warning(warning_type type);
+	void add_message(message_type type);
+};
 
 #endif

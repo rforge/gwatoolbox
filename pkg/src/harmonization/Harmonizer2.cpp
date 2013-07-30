@@ -877,7 +877,7 @@ void Harmonizer2::write_columns() throw (WriterException) {
 	output_writer->write("\n");
 }
 
-void Harmonizer2::harmonize(bool flip, bool drop) throw (Harmonizer2Exception) {
+void Harmonizer2::harmonize(bool flip, bool drop, Harmonizer2Log& log) throw (Harmonizer2Exception) {
 	char* line = NULL;
 	char* token = NULL;
 	int line_length = 0;
@@ -962,6 +962,7 @@ void Harmonizer2::harmonize(bool flip, bool drop) throw (Harmonizer2Exception) {
 			index_by_chr_it = index_by_chr.find(tokens[chr_column_pos]);
 			if (index_by_chr_it == index_by_chr.end()) {
 				log_writer->write("Line %u: (WARNING) Chromosome of %s at %s:%s is not in VCF.\n", input_file_line_number, tokens[id_column_pos], tokens[chr_column_pos], tokens[pos_column_pos]);
+				log.add_warning(Harmonizer2Log::CHROMOSOME_MISSING);
 				if (!drop) write_columns();
 				continue;
 			}
@@ -973,6 +974,7 @@ void Harmonizer2::harmonize(bool flip, bool drop) throw (Harmonizer2Exception) {
 			query_position.position = strtoul(tokens[pos_column_pos], &end_ptr, 10);
 			if (end_ptr == tokens[pos_column_pos]) {
 				log_writer->write("Line %u: (WARNING) Position %s of %s can't be parsed to integer.\n", input_file_line_number, tokens[pos_column_pos], tokens[id_column_pos]);
+				log.add_warning(Harmonizer2Log::BAD_POSITION);
 				if (!drop) write_columns();
 				continue;
 			}
@@ -1019,6 +1021,7 @@ void Harmonizer2::harmonize(bool flip, bool drop) throw (Harmonizer2Exception) {
 					empty_second_allele = true;
 				} else {
 					log_writer->write("Line %u: (WARNING) Alleles %s/%s of %s at %s:%s don't match any variation type.\n", input_file_line_number, tokens[first_allele_column_pos], tokens[second_allele_column_pos], tokens[id_column_pos], tokens[chr_column_pos], tokens[pos_column_pos]);
+					log.add_warning(Harmonizer2Log::BAD_ALLELES);
 					if (!drop) write_columns();
 					continue;
 				}
@@ -1030,6 +1033,7 @@ void Harmonizer2::harmonize(bool flip, bool drop) throw (Harmonizer2Exception) {
 					empty_first_allele = true;
 				} else if (strspn(first_allele, "ACGT") != first_allele_length) {
 					log_writer->write("Line %u: (WARNING) Alleles %s/%s of %s at %s:%s don't match any variation type.\n", input_file_line_number, tokens[first_allele_column_pos], tokens[second_allele_column_pos], tokens[id_column_pos], tokens[chr_column_pos], tokens[pos_column_pos]);
+					log.add_warning(Harmonizer2Log::BAD_ALLELES);
 					if (!drop) write_columns();
 					continue;
 				}
@@ -1039,18 +1043,21 @@ void Harmonizer2::harmonize(bool flip, bool drop) throw (Harmonizer2Exception) {
 					empty_second_allele = true;
 				} else if (strspn(second_allele, "ACGT") != second_allele_length) {
 					log_writer->write("Line %u: (WARNING) Alleles %s/%s of %s at %s:%s don't match any variation type.\n", input_file_line_number, tokens[first_allele_column_pos], tokens[second_allele_column_pos], tokens[id_column_pos], tokens[chr_column_pos], tokens[pos_column_pos]);
+					log.add_warning(Harmonizer2Log::BAD_ALLELES);
 					if (!drop) write_columns();
 					continue;
 				}
 
 				if (empty_first_allele && empty_second_allele) {
 					log_writer->write("Line %u: (WARNING) Alleles %s/%s of %s at %s:%s don't match any variation type.\n", input_file_line_number, tokens[first_allele_column_pos], tokens[second_allele_column_pos], tokens[id_column_pos], tokens[chr_column_pos], tokens[pos_column_pos]);
+					log.add_warning(Harmonizer2Log::BAD_ALLELES);
 					if (!drop) write_columns();
 					continue;
 				}
 
 				if (!empty_first_allele && !empty_second_allele && (first_allele_length == second_allele_length)) {
 					log_writer->write("Line %u: (WARNING) Alleles %s/%s of %s at %s:%s don't match any variation type.\n", input_file_line_number, tokens[first_allele_column_pos], tokens[second_allele_column_pos], tokens[id_column_pos], tokens[chr_column_pos], tokens[pos_column_pos]);
+					log.add_warning(Harmonizer2Log::BAD_ALLELES);
 					if (!drop) write_columns();
 					continue;
 				}
@@ -1059,6 +1066,7 @@ void Harmonizer2::harmonize(bool flip, bool drop) throw (Harmonizer2Exception) {
 			found_position = (position_index_entry*)bsearch(&query_position, positions, index_size, sizeof(position_index_entry), qsort_position_index_entry_cmp);
 			if (found_position == NULL) {
 				log_writer->write("Line %u: (WARNING) Position %s:%s of %s is not in VCF.\n", input_file_line_number, tokens[chr_column_pos], tokens[pos_column_pos], tokens[id_column_pos]);
+				log.add_warning(Harmonizer2Log::POSITION_MISSING);
 				if (!drop) write_columns();
 				continue;
 			}
@@ -1114,6 +1122,7 @@ void Harmonizer2::harmonize(bool flip, bool drop) throw (Harmonizer2Exception) {
 								((auxiliary::strcmp_ignore_case(positions[start].ref_allele, flipped_second_allele) == 0) && (auxiliary::strcmp_ignore_case(positions[start].nonref_allele, flipped_first_allele) == 0))) {
 							if (flip) {
 								log_writer->write("Line %u: Strand of %s at %s:%s flipped.\n", input_file_line_number, tokens[id_column_pos], tokens[chr_column_pos], tokens[pos_column_pos]);
+								log.add_message(Harmonizer2Log::STRAND_FLIPPED);
 
 								tokens[first_allele_column_pos][0] = flipped_first_allele[0];
 								tokens[first_allele_column_pos][1] = '\0';
@@ -1130,6 +1139,7 @@ void Harmonizer2::harmonize(bool flip, bool drop) throw (Harmonizer2Exception) {
 							if (auxiliary::strcmp_ignore_case(positions[start].nonref_allele, VCF_ALT_ALLELE_DEL) == 0) { // Structural variant (i.e. <DEL>) in alternate VCF allele.
 								if (empty_second_allele && (auxiliary::strcmp_ignore_case(positions[start].ref_allele, first_allele) == 0)) {
 									log_writer->write("Line %u: Alleles %s/%s of %s at %s:%s changed to %s/%s.\n", input_file_line_number, tokens[first_allele_column_pos], tokens[second_allele_column_pos], tokens[id_column_pos], tokens[chr_column_pos], tokens[pos_column_pos], "R", "D");
+									log.add_message(Harmonizer2Log::ALLELES_CHANGED);
 
 									tokens[first_allele_column_pos][0] = 'R';
 									tokens[first_allele_column_pos][1] = '\0';
@@ -1140,6 +1150,7 @@ void Harmonizer2::harmonize(bool flip, bool drop) throw (Harmonizer2Exception) {
 									break;
 								} else if (empty_first_allele && (auxiliary::strcmp_ignore_case(positions[start].ref_allele, second_allele) == 0)) {
 									log_writer->write("Line %u: Alleles %s/%s of %s at %s:%s changed to %s/%s.\n", input_file_line_number, tokens[first_allele_column_pos], tokens[second_allele_column_pos], tokens[id_column_pos], tokens[chr_column_pos], tokens[pos_column_pos], "D", "R");
+									log.add_message(Harmonizer2Log::ALLELES_CHANGED);
 
 									tokens[first_allele_column_pos][0] = 'D';
 									tokens[first_allele_column_pos][1] = '\0';
@@ -1153,6 +1164,7 @@ void Harmonizer2::harmonize(bool flip, bool drop) throw (Harmonizer2Exception) {
 								if ((auxiliary::strcmp_ignore_case(positions[start].ref_allele, first_allele) == 0) && (auxiliary::strcmp_ignore_case(positions[start].nonref_allele, second_allele) == 0)) {
 									if (positions[start].subtype == 'D') {
 										log_writer->write("Line %u: Alleles %s/%s of %s at %s:%s changed to %s/%s.\n", input_file_line_number, tokens[first_allele_column_pos], tokens[second_allele_column_pos], tokens[id_column_pos], tokens[chr_column_pos], tokens[pos_column_pos], "R", "D");
+										log.add_message(Harmonizer2Log::ALLELES_CHANGED);
 
 										tokens[first_allele_column_pos][0] = 'R';
 										tokens[first_allele_column_pos][1] = '\0';
@@ -1160,6 +1172,7 @@ void Harmonizer2::harmonize(bool flip, bool drop) throw (Harmonizer2Exception) {
 										tokens[second_allele_column_pos][1] = '\0';
 									} else {
 										log_writer->write("Line %u: Alleles %s/%s of %s at %s:%s changed to %s/%s.\n", input_file_line_number, tokens[first_allele_column_pos], tokens[second_allele_column_pos], tokens[id_column_pos], tokens[chr_column_pos], tokens[pos_column_pos], "R", "I");
+										log.add_message(Harmonizer2Log::ALLELES_CHANGED);
 
 										tokens[first_allele_column_pos][0] = 'R';
 										tokens[first_allele_column_pos][1] = '\0';
@@ -1172,6 +1185,7 @@ void Harmonizer2::harmonize(bool flip, bool drop) throw (Harmonizer2Exception) {
 								} else if ((auxiliary::strcmp_ignore_case(positions[start].ref_allele, second_allele) == 0) && (auxiliary::strcmp_ignore_case(positions[start].nonref_allele, first_allele) == 0)) {
 									if (positions[start].subtype == 'D') {
 										log_writer->write("Line %u: Alleles %s/%s of %s at %s:%s changed to %s/%s.\n", input_file_line_number, tokens[first_allele_column_pos], tokens[second_allele_column_pos], tokens[id_column_pos], tokens[chr_column_pos], tokens[pos_column_pos], "D", "R");
+										log.add_message(Harmonizer2Log::ALLELES_CHANGED);
 
 										tokens[first_allele_column_pos][0] = 'D';
 										tokens[first_allele_column_pos][1] = '\0';
@@ -1179,6 +1193,7 @@ void Harmonizer2::harmonize(bool flip, bool drop) throw (Harmonizer2Exception) {
 										tokens[second_allele_column_pos][1] = '\0';
 									} else {
 										log_writer->write("Line %u: Alleles %s/%s of %s at %s:%s changed to %s/%s.\n", input_file_line_number, tokens[first_allele_column_pos], tokens[second_allele_column_pos], tokens[id_column_pos], tokens[chr_column_pos], tokens[pos_column_pos], "I", "R");
+										log.add_message(Harmonizer2Log::ALLELES_CHANGED);
 
 										tokens[first_allele_column_pos][0] = 'I';
 										tokens[first_allele_column_pos][1] = '\0';
@@ -1204,14 +1219,17 @@ void Harmonizer2::harmonize(bool flip, bool drop) throw (Harmonizer2Exception) {
 
 			if (!type_ok) {
 				log_writer->write("Line %u: (WARNING) Type of %s at %s:%s doesn't match type in VCF.\n", input_file_line_number, tokens[id_column_pos], tokens[chr_column_pos], tokens[pos_column_pos]);
+				log.add_warning(Harmonizer2Log::TYPE_MISMATCH);
 				if (!drop) write_columns();
 				continue;
 			} else if (!alleles_ok) {
 				log_writer->write("Line %u: (WARNING) Alleles %s/%s of %s at %s:%s don't match alleles in VCF.\n", input_file_line_number, tokens[first_allele_column_pos], tokens[second_allele_column_pos], tokens[id_column_pos], tokens[chr_column_pos], tokens[pos_column_pos]);
+				log.add_warning(Harmonizer2Log::ALLELE_MISMATCH);
 				if (!drop) write_columns();
 				continue;
 			} else if (!strand_ok) {
 				log_writer->write("Line %u: (WARNING) Strand of %s at %s:%s doesn't match strand in VCF.\n", input_file_line_number, tokens[id_column_pos], tokens[chr_column_pos], tokens[pos_column_pos]);
+				log.add_warning(Harmonizer2Log::STRAND_MISMATCH);
 				if (!drop) write_columns();
 				continue;
 			}
@@ -1225,6 +1243,7 @@ void Harmonizer2::harmonize(bool flip, bool drop) throw (Harmonizer2Exception) {
 
 			if (strcmp(buffer, tokens[id_column_pos]) != 0) {
 				log_writer->write("Line %u: %s changed to %s.\n", input_file_line_number, tokens[id_column_pos], buffer);
+				log.add_message(Harmonizer2Log::ID_CHANGED);
 				tokens[id_column_pos] = buffer;
 			}
 

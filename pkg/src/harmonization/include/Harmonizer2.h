@@ -25,6 +25,7 @@
 #include <set>
 
 #include "Harmonizer2Exception.h"
+#include "Harmonizer2Log.h"
 #include "../../reader/include/ReaderFactory.h"
 #include "../../writer/include/WriterFactory.h"
 #include "../../auxiliary/include/auxiliary.h"
@@ -145,7 +146,7 @@ public:
 
 	void process_header() throw (Harmonizer2Exception);
 	void index_vcf(const char* file_name) throw (Harmonizer2Exception);
-	void harmonize(bool flip, bool drop) throw (Harmonizer2Exception);
+	void harmonize(bool flip, bool drop, Harmonizer2Log& log) throw (Harmonizer2Exception);
 };
 
 #endif

@@ -1816,6 +1816,7 @@ SEXP perform_harmonization_by_pos(SEXP input_file_name, SEXP output_file_name, S
 
 	try {
 		Harmonizer2 harmonizer;
+		Harmonizer2Log log;
 
 		harmonizer.open_input_file(c_input_file_name, c_id_column_name, c_chr_column_name, c_pos_column_name, c_first_allele_column_name, c_second_allele_column_name, c_separator[0u]);
 		harmonizer.open_output_file(c_output_file_name, c_gzip);
@@ -1825,11 +1826,25 @@ SEXP perform_harmonization_by_pos(SEXP input_file_name, SEXP output_file_name, S
 
 		harmonizer.index_vcf(c_vcf_file_name);
 
-		harmonizer.harmonize(c_flip, c_drop);
+		harmonizer.harmonize(c_flip, c_drop, log);
 
 		harmonizer.close_input_file();
 		harmonizer.close_output_file();
 		harmonizer.close_log_file();
+
+		Rprintf("WARNINGS:\n");
+		Rprintf(" %s: %d\n", log.warnings[Harmonizer2Log::CHROMOSOME_MISSING], log.warning_counts[Harmonizer2Log::CHROMOSOME_MISSING]);
+		Rprintf(" %s: %d\n", log.warnings[Harmonizer2Log::POSITION_MISSING], log.warning_counts[Harmonizer2Log::POSITION_MISSING]);
+		Rprintf(" %s: %d\n", log.warnings[Harmonizer2Log::TYPE_MISMATCH], log.warning_counts[Harmonizer2Log::TYPE_MISMATCH]);
+		Rprintf(" %s: %d\n", log.warnings[Harmonizer2Log::ALLELE_MISMATCH], log.warning_counts[Harmonizer2Log::ALLELE_MISMATCH]);
+		Rprintf(" %s: %d\n", log.warnings[Harmonizer2Log::STRAND_MISMATCH], log.warning_counts[Harmonizer2Log::STRAND_MISMATCH]);
+		Rprintf(" %s: %d\n", log.warnings[Harmonizer2Log::BAD_ALLELES], log.warning_counts[Harmonizer2Log::BAD_ALLELES]);
+		Rprintf(" %s: %d\n", log.warnings[Harmonizer2Log::BAD_POSITION], log.warning_counts[Harmonizer2Log::BAD_POSITION]);
+
+		Rprintf("CHANGES:\n");
+		Rprintf(" %s: %d\n", log.messages[Harmonizer2Log::STRAND_FLIPPED], log.message_counts[Harmonizer2Log::STRAND_FLIPPED]);
+		Rprintf(" %s: %d\n", log.messages[Harmonizer2Log::ALLELES_CHANGED], log.message_counts[Harmonizer2Log::ALLELES_CHANGED]);
+		Rprintf(" %s: %d\n", log.messages[Harmonizer2Log::ID_CHANGED], log.message_counts[Harmonizer2Log::ID_CHANGED]);
 	} catch (Exception &e) {
 		error("\n%s", e.what());
 	}

@@ -19,7 +19,7 @@
 
 include $(R_MAKECONF)
 
-gwalib:	Harmonizer.o HarmonizerException.o Harmonizer2.o Harmonizer2Exception.o
+gwalib:	Harmonizer.o HarmonizerException.o Harmonizer2Log.o Harmonizer2.o Harmonizer2Exception.o
 
 clean:  
 	@-rm -f *.o
