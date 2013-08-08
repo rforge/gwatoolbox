@@ -68,6 +68,7 @@ public:
 	char get_ld_file_data_separator();
 
 	void check_filters(Descriptor* descriptor) throw (GwaFileException);
+	void check_re_filters(Descriptor* descriptor) throw (GwaFileException);
 	void check_thresholds(Descriptor* descriptor) throw (GwaFileException);
 	void check_prefix(Descriptor* descriptor) throw (GwaFileException);
 	void check_casesensitivity(Descriptor* descriptor) throw (GwaFileException);

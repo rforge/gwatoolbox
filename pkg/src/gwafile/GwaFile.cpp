@@ -163,6 +163,40 @@ void GwaFile::check_filters(Descriptor* descriptor) throw (GwaFileException) {
 	}
 }
 
+void GwaFile::check_re_filters(Descriptor* descriptor) throw (GwaFileException) {
+	vector<double>* filters = NULL;
+	double swap_value = 0.0;
+
+	if (descriptor == NULL) {
+		throw GwaFileException("GwaFile", "check_filters( Descriptor* )", __LINE__, 0, "descriptor");
+	}
+
+	try {
+		if ((filters = descriptor->get_threshold(Descriptor::MAF)) == NULL) {
+			descriptor->add_threshold(Descriptor::MAF, 0.01);
+			descriptor->add_threshold(Descriptor::MAF, 0.05);
+		} else if (filters->size() < 2) {
+			throw GwaFileException("GwaFile", "check_re_filters( Descriptor* )", __LINE__, 3, Descriptor::MAF, descriptor->get_full_path());
+		} else if (filters->size() > 2) {
+			throw GwaFileException("GwaFile", "check_re_filters( Descriptor* )", __LINE__, 4, Descriptor::MAF, descriptor->get_full_path());
+		} else if (filters->at(0) > filters->at(1)) {
+			swap_value = filters->at(0);
+			filters->at(0) = filters->at(1);
+			filters->at(1) = swap_value;
+		}
+
+		if ((filters = descriptor->get_threshold(Descriptor::IMP)) == NULL) {
+			descriptor->add_threshold(Descriptor::IMP, 0.3);
+		} else if (filters->size() > 1) {
+			throw GwaFileException("GwaFile", "check_re_filters( Descriptor* )", __LINE__, 16, Descriptor::IMP, descriptor->get_full_path());
+		}
+	} catch (DescriptorException &e) {
+		GwaFileException new_e(e);
+		new_e.add_message("GwaFile", "check_randomeffect_filters( Descriptor* )", __LINE__, 10, descriptor->get_full_path());
+		throw new_e;
+	}
+}
+
 void GwaFile::check_thresholds(Descriptor* descriptor) throw (GwaFileException) {
 	vector<double>* thresholds = NULL;
 	double swap_value = 0.0;

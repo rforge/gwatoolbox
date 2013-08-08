@@ -22,6 +22,7 @@
 #include <ctime>
 #include <limits>
 #include <cstring>
+#include <vector>
 
 #include "exception/include/Exception.h"
 #include "descriptor/include/Descriptor.h"
@@ -32,6 +33,7 @@
 #include "harmonization/include/Harmonizer.h"
 #include "harmonization/include/Harmonizer2.h"
 #include "independization/include/Selector.h"
+#include "randomeffect/include/Sampler.h"
 
 /* Define LINUX flag for compilation under Linux */
 #ifndef WIN32
@@ -1894,6 +1896,143 @@ SEXP perform_snps_independization(SEXP external_descriptor_pointer) {
 	} catch (Exception &e) {
 		error("\n%s", e.what());
 	}
+
+/*	try {
+		Annotator annotator;
+
+		gwa_file = new GwaFile(descriptor, check_functions, 8);
+
+		annotator.open_gwafile(gwa_file);
+		annotator.process_header();
+
+		if (annotator.is_map_present()) {
+			annotator.index_map();
+		}
+		annotator.index_regions();
+
+		annotator.annotate();
+
+		annotator.close_gwafile();
+
+		delete gwa_file;
+	} catch (Exception &e) {
+		error("\n%s", e.what());
+	} */
+
+	return R_NilValue;
+}
+
+SEXP perform_random_effects_analysis(SEXP external_descriptor_pointers) {
+	int n_pointers = 0;
+
+	SEXP external_descriptor_pointer = R_NilValue;
+
+	Descriptor* descriptor = NULL;
+	vector<Descriptor*> descriptors;
+	vector<Descriptor*>::iterator descriptors_it;
+
+	GwaFile* gwa_file = NULL;
+	vector<GwaFile*> gwa_files;
+	vector<GwaFile*>::iterator gwa_files_it;
+
+	void (GwaFile::*check_functions[5])(Descriptor*) = {
+			&GwaFile::check_re_filters,
+			&GwaFile::check_prefix,
+			&GwaFile::check_casesensitivity,
+			&GwaFile::check_missing_value,
+			&GwaFile::check_separators,
+	};
+
+	if (external_descriptor_pointers == R_NilValue) {
+		error("\nThe vector of file descriptors is NULL.");
+	}
+
+	if (!isVector(external_descriptor_pointers)) {
+		error("\nThe vector of file descriptors has incorrect type.");
+	}
+
+	n_pointers = length(external_descriptor_pointers);
+	if (n_pointers <= 0) {
+		error("\nThe vector of file descriptors is empty.");
+	}
+
+	for (int i = 0; i < n_pointers; ++i) {
+		external_descriptor_pointer = VECTOR_ELT(external_descriptor_pointers, i);
+
+		if (external_descriptor_pointer == R_NilValue) {
+			error("\nThe external Descriptor pointer argument is NULL.");
+		}
+
+		if (TYPEOF(external_descriptor_pointer) != EXTPTRSXP) {
+			error("\nThe external Descriptor pointer argument has incorrect type.");
+		}
+
+		descriptor = (Descriptor*)R_ExternalPtrAddr(external_descriptor_pointer);
+
+		descriptors.push_back(descriptor);
+	}
+
+	try {
+		Sampler sampler;
+
+		for (descriptors_it = descriptors.begin(); descriptors_it != descriptors.end(); ++descriptors_it) {
+			descriptor = *descriptors_it;
+			gwa_file = new GwaFile(descriptor, check_functions, 5);
+			gwa_files.push_back(gwa_file);
+		}
+
+		sampler.get_common_entries(gwa_files);
+		sampler.sample_common_markers(gwa_files);
+
+		for (gwa_files_it = gwa_files.begin(); gwa_files_it != gwa_files.end(); ++gwa_files_it) {
+			delete *gwa_files_it;
+		}
+	} catch (Exception &e) {
+		error("\n%s", e.what());
+	}
+
+
+/*	Descriptor* descriptor = NULL;
+	GwaFile* gwa_file = NULL;
+
+	void (GwaFile::*check_functions[7])(Descriptor*) = {
+			&GwaFile::check_prefix,
+			&GwaFile::check_casesensitivity,
+			&GwaFile::check_missing_value,
+			&GwaFile::check_separators,
+			&GwaFile::check_ld_files,
+			&GwaFile::check_ld_files_separators,
+			&GwaFile::check_ld_threshold
+	};
+
+	if (external_descriptor_pointer == R_NilValue) {
+		error("\nThe external Descriptor pointer argument is NULL.");
+	}
+
+	if (TYPEOF(external_descriptor_pointer) != EXTPTRSXP) {
+		error("\nThe external Descriptor pointer argument has an incorrect type.");
+	}
+
+	descriptor = (Descriptor*)R_ExternalPtrAddr(external_descriptor_pointer);
+
+	try {
+		Selector selector;
+
+		gwa_file = new GwaFile(descriptor, check_functions, 7);
+
+		selector.open_gwafile(gwa_file);
+		selector.process_header();
+		selector.process_data();
+
+		selector.independize();
+
+		selector.close_gwafile();
+
+		delete gwa_file;
+		gwa_file = NULL;
+	} catch (Exception &e) {
+		error("\n%s", e.what());
+	} */
 
 /*	try {
 		Annotator annotator;

@@ -19,7 +19,7 @@
 
 #include "include/GwaFileException.h"
 
-const int GwaFileException::MESSAGE_TEMPLATES_NUMBER = 16;
+const int GwaFileException::MESSAGE_TEMPLATES_NUMBER = 17;
 const char* GwaFileException::MESSAGE_TEMPLATES[] = {
 /*00*/	"The '%s' argument has NULL value.",
 /*01*/	"The '%s' argument has an invalid value.",
@@ -36,7 +36,8 @@ const char* GwaFileException::MESSAGE_TEMPLATES[] = {
 /*12*/	"The name of the file with regions for annotation is not specified in the %s command for the '%s' file.",
 /*13*/	"Negative value is specified in the %s command for the '%s' file. Strictly positive values or 0 are required.",
 /*14*/	"Names of the files with LD values for independent SNPs selection are not specified in the %s commands for the '%s' file.",
-/*15*/	"Field separators in %s file don't match field separators in previously declared files in the %s commands for the '%s' file."
+/*15*/	"Field separators in %s file don't match field separators in previously declared files in the %s commands for the '%s' file.",
+/*16*/	"Too many thresholds are specified in the high quality imputation filter %s for the '%s' file. Strictly one threshold is required."
 };
 
 GwaFileException::GwaFileException() : Exception() {

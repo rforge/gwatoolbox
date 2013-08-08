@@ -58,7 +58,8 @@ GWADIRS = 	auxiliary \
 			intervaltree \
 			annotation \
 			harmonization \
-			independization
+			independization \
+			randomeffect
 
 GWALIBS = 	auxiliary/*.o \
 			exception/*.o \
@@ -77,7 +78,8 @@ GWALIBS = 	auxiliary/*.o \
 			intervaltree/*.o \
 			annotation/*.o \
 			harmonization/*.o \
-			independization/*.o
+			independization/*.o \
+			randomeffect/*.o
 			
 .PHONY: all gwalibs
      
