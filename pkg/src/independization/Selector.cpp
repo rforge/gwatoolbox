@@ -1,5 +1,5 @@
 /*
- * Copyright © 2011 Daniel Taliun, Christian Fuchsberger and Cristian Pattaro. All rights reserved.
+ * Copyright ï¿½ 2011 Daniel Taliun, Christian Fuchsberger and Cristian Pattaro. All rights reserved.
  *
  * This file is part of GWAtoolbox.
  *
@@ -21,11 +21,15 @@
 
 const double Selector::EPSILON = 0.00000001;
 
-Selector::Selector() : gwafile(NULL), reader(NULL), /*header_backup(NULL),*/
+Selector::Selector() : gwafile(NULL), reader(NULL), ld_reader(NULL), /*header_backup(NULL),*/
 	total_columns(numeric_limits<int>::min()),
 	marker_column_pos(numeric_limits<int>::min()),
 	chr_column_pos(numeric_limits<int>::min()),
 	pvalue_column_pos(numeric_limits<int>::min()),
+	ld_total_columns(numeric_limits<int>::min()),
+	ld_marker1_column_pos(numeric_limits<int>::min()),
+	ld_marker2_column_pos(numeric_limits<int>::min()),
+	ld_value_column_pos(numeric_limits<int>::min()),
 	markers_by_chr(auxiliary::bool_strcmp) {
 
 }
@@ -347,9 +351,7 @@ void Selector::open_ld_file(const char* file_path) throw (SelectorException) {
 
 	try {
 		close_ld_file();
-
 		ld_file_path = file_path;
-
 		ld_reader = ReaderFactory::create(file_path);
 		ld_reader->open();
 	} catch (ReaderException& e) {
@@ -644,10 +646,12 @@ void Selector::drop_correlated_markers() throw (SelectorException) {
 		markers_by_chr_it = markers_by_chr.begin();
 		while (markers_by_chr_it != markers_by_chr.end()) {
 			ld_file_name = markers_by_chr_it->first;
+
 			ld_file_path = descriptor->get_ld_file(ld_file_name);
 
-			cout << markers_by_chr_it->first << " " << markers_by_chr_it->second->size() << endl;
-
+//			cout << "File name: " << ld_file_name << endl;
+//			cout << ld_file_path << endl;
+//			cout << markers_by_chr_it->first << " " << markers_by_chr_it->second->size() << endl;
 			if (ld_file_path != NULL) {
 				markers = markers_by_chr_it->second;
 
@@ -697,8 +701,6 @@ void Selector::drop_correlated_markers() throw (SelectorException) {
 				delete markers;
 				markers = NULL;
 			}
-
-			cout << markers_by_chr_it->first << " " << markers_by_chr_it->second->size() << endl;
 
 			markers_by_chr_it++;
 		}
