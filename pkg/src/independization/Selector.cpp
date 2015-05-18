@@ -21,16 +21,16 @@
 
 const double Selector::EPSILON = 0.00000001;
 
-Selector::Selector() : gwafile(NULL), reader(NULL), ld_reader(NULL), /*header_backup(NULL),*/
+Selector::Selector() : gwafile(NULL), reader(NULL), ld_reader(NULL), ld_file_path(NULL),
 	total_columns(numeric_limits<int>::min()),
 	marker_column_pos(numeric_limits<int>::min()),
-	chr_column_pos(numeric_limits<int>::min()),
 	pvalue_column_pos(numeric_limits<int>::min()),
 	ld_total_columns(numeric_limits<int>::min()),
 	ld_marker1_column_pos(numeric_limits<int>::min()),
 	ld_marker2_column_pos(numeric_limits<int>::min()),
 	ld_value_column_pos(numeric_limits<int>::min()),
-	markers_by_chr(auxiliary::bool_strcmp) {
+	markers(auxiliary::bool_strcmp),
+	independent_markers(auxiliary::bool_strcmp) {
 
 }
 
@@ -42,19 +42,8 @@ Selector::~Selector() {
 		reader = NULL;
 	}
 
-//	if (header_backup != NULL) {
-//		free(header_backup);
-//		header_backup = NULL;
-//	}
-
-	markers_by_chr_it = markers_by_chr.begin();
-	while (markers_by_chr_it != markers_by_chr.end()) {
-		markers_by_chr_it->second->clear();
-		delete markers_by_chr_it->second;
-		free(markers_by_chr_it->first);
-		markers_by_chr_it++;
-	}
-	markers_by_chr.clear();
+	markers.clear();
+	independent_markers.clear();
 
 	markers_ld_it = markers_ld.begin();
 	while (markers_ld_it != markers_ld.end()) {
@@ -113,19 +102,8 @@ void Selector::close_gwafile() throw (SelectorException) {
 		throw new_e;
 	}
 
-//	if (header_backup != NULL) {
-//		free(header_backup);
-//		header_backup = NULL;
-//	}
-
-	markers_by_chr_it = markers_by_chr.begin();
-	while (markers_by_chr_it != markers_by_chr.end()) {
-		markers_by_chr_it->second->clear();
-		delete markers_by_chr_it->second;
-		free(markers_by_chr_it->first);
-		markers_by_chr_it++;
-	}
-	markers_by_chr.clear();
+	markers.clear();
+	independent_markers.clear();
 
 	markers_ld_it = markers_ld.begin();
 	while (markers_ld_it != markers_ld.end()) {
@@ -167,15 +145,8 @@ void Selector::process_header() throw (SelectorException) {
 
 		header = *(reader->line);
 
-//		header_backup = (char*)malloc((strlen(header) + 1u) * sizeof(char));
-//		if (header_backup == NULL) {
-//			throw SelectorException("Selector", "process_header()", __LINE__, 2, ((strlen(header) + 1u) * sizeof(char)));
-//		}
-//		strcpy(header_backup, header);
-
 		total_columns = numeric_limits<int>::min();
 		marker_column_pos = numeric_limits<int>::min();
-		chr_column_pos = numeric_limits<int>::min();
 		pvalue_column_pos = numeric_limits<int>::min();
 
 		token = auxiliary::strtok(&header, header_separator);
@@ -184,8 +155,6 @@ void Selector::process_header() throw (SelectorException) {
 			if (column_name != NULL) {
 				if (strcmp(column_name, Descriptor::MARKER) == 0) {
 					marker_column_pos = column_position;
-				} else if (strcmp(column_name, Descriptor::CHR) == 0) {
-					chr_column_pos = column_position;
 				} else if (strcmp(column_name, Descriptor::PVALUE) == 0) {
 					pvalue_column_pos = column_position;
 				}
@@ -198,10 +167,6 @@ void Selector::process_header() throw (SelectorException) {
 
 		if (marker_column_pos < 0) {
 			throw SelectorException("Selector", "process_header()", __LINE__, 7, ((column_name = descriptor->get_column(Descriptor::MARKER)) != NULL) ? column_name : Descriptor::MARKER, gwafile->get_descriptor()->get_name());
-		}
-
-		if (chr_column_pos < 0) {
-			throw SelectorException("Selector", "process_header()", __LINE__, 7, ((column_name = descriptor->get_column(Descriptor::CHR)) != NULL) ? column_name : Descriptor::CHR, gwafile->get_descriptor()->get_name());
 		}
 
 		if (pvalue_column_pos < 0) {
@@ -236,11 +201,9 @@ void Selector::process_data() throw (SelectorException) {
 	const char* column_name = NULL;
 
 	char* marker_token = NULL;
-	char* chr_token = NULL;
 	char* pvalue_token = NULL;
 
 	char* marker = NULL;
-	char* chr = NULL;
 	double pvalue = 0.0;
 
 	if (gwafile == NULL) {
@@ -257,14 +220,11 @@ void Selector::process_data() throw (SelectorException) {
 
 			column_position = 0;
 			marker_token = NULL;
-			chr_token = NULL;
 			pvalue_token = NULL;
 			token = auxiliary::strtok(&line, data_separator);
 			while (token != NULL) {
 				if (column_position == marker_column_pos) {
 					marker_token = token;
-				} else if (column_position == chr_column_pos) {
-					chr_token = token;
 				} else if (column_position == pvalue_column_pos) {
 					pvalue_token = token;
 				}
@@ -293,23 +253,8 @@ void Selector::process_data() throw (SelectorException) {
 				continue;
 			}
 
-			markers_by_chr_it = markers_by_chr.find(chr_token);
-			if (markers_by_chr_it == markers_by_chr.end()) {
-				markers = new map<const char*, double, bool(*)(const char*, const char*)>(auxiliary::bool_strcmp);
-
-				chr = (char*)malloc((strlen(chr_token) + 1u) * sizeof(char));
-				if (chr == NULL) {
-					throw SelectorException("Selector", "process_data()",  __LINE__, 2, ((strlen(chr_token) + 1u) * sizeof(char)));
-				}
-				strcpy(chr, chr_token);
-
-				markers_by_chr.insert(pair<char*, map<const char*, double, bool(*)(const char*, const char*)>*>(chr, markers));
-			} else {
-				markers = markers_by_chr_it->second;
-			}
-
-			markers_it = markers->find(marker_token);
-			if (markers_it == markers->end()) {
+			markers_it = markers.find(marker_token);
+			if (markers_it == markers.end()) {
 				marker = (char*)malloc((strlen(marker_token) + 1u) * sizeof(char));
 				if (marker == NULL) {
 					throw SelectorException("Selector", "process_data()",  __LINE__, 2, ((strlen(marker_token) + 1u) * sizeof(char)));
@@ -318,7 +263,7 @@ void Selector::process_data() throw (SelectorException) {
 
 				all_marker_names.push_back(marker);
 
-				markers->insert(pair<char*, double>(marker, pvalue));
+				markers.insert(pair<char*, double>(marker, pvalue));
 			} else {
 				/* trhow error about duplicates */
 				throw SelectorException("Selector", "process_data()",  __LINE__);
@@ -342,6 +287,10 @@ void Selector::process_data() throw (SelectorException) {
 		e.add_message("Selector", "process_data()", __LINE__, 12, gwafile->get_descriptor()->get_name());
 		throw;
 	}
+}
+
+int Selector::comp_marker_entry(const void* first, const void* second) {
+	return auxiliary::fcmp(((marker_entry*)first)->pvalue, ((marker_entry*)second)->pvalue, EPSILON);
 }
 
 void Selector::open_ld_file(const char* file_path) throw (SelectorException) {
@@ -562,15 +511,15 @@ void Selector::process_ld_data() throw (SelectorException) {
 				continue;
 			}
 
-			markers_it = markers->find(ld_marker1_token);
-			if (markers_it == markers->end()) {
+			markers_it = markers.find(ld_marker1_token);
+			if (markers_it == markers.end()) {
 				++line_number;
 				continue;
 			}
 			ld_marker1 = markers_it->first;
 
-			markers_it = markers->find(ld_marker2_token);
-			if (markers_it == markers->end()) {
+			markers_it = markers.find(ld_marker2_token);
+			if (markers_it == markers.end()) {
 				++line_number;
 				continue;
 			}
@@ -629,11 +578,13 @@ void Selector::index_ld(const char* file_path) throw (SelectorException) {
 void Selector::drop_correlated_markers() throw (SelectorException) {
 	Descriptor* descriptor = NULL;
 
-	const char* ld_file_name = NULL;
-	const char* ld_file_path = NULL;
+	vector<const char*>* ld_files = NULL;
+	vector<const char*>::iterator ld_files_it;
 
-	map<const char*, double, bool(*)(const char*, const char*)>* independent_markers = NULL;
-	map<const char*, double, bool(*)(const char*, const char*)>::iterator independent_markers_it;
+
+	marker_entry* sorted_markers = NULL;
+	unsigned int sorted_markers_size = 0u;
+	unsigned int sorted_markers_index = 0u;
 
 	map<const char*, double, bool(*)(const char*, const char*)>::iterator min_pvalue_it;
 
@@ -643,67 +594,57 @@ void Selector::drop_correlated_markers() throw (SelectorException) {
 	try {
 		descriptor = gwafile->get_descriptor();
 
-		markers_by_chr_it = markers_by_chr.begin();
-		while (markers_by_chr_it != markers_by_chr.end()) {
-			ld_file_name = markers_by_chr_it->first;
+		sorted_markers_size = markers.size();
 
-			ld_file_path = descriptor->get_ld_file(ld_file_name);
+		sorted_markers = (marker_entry*)malloc(sorted_markers_size * sizeof(marker_entry));
+		if (sorted_markers == NULL) {
+			throw Exception("Selector", "drop_correlated_markers()", __LINE__, 2, markers.size() * sizeof(marker_entry));
+		}
+		markers_it = markers.begin();
+		sorted_markers_index = 0u;
+		while (markers_it != markers.end()) {
+			sorted_markers[sorted_markers_index].marker = markers_it->first;
+			sorted_markers[sorted_markers_index].pvalue = markers_it->second;
+			sorted_markers_index++;
+			markers_it++;
+		}
 
-//			cout << "File name: " << ld_file_name << endl;
-//			cout << ld_file_path << endl;
-//			cout << markers_by_chr_it->first << " " << markers_by_chr_it->second->size() << endl;
-			if (ld_file_path != NULL) {
-				markers = markers_by_chr_it->second;
+		qsort((void*)sorted_markers, markers.size(), sizeof(marker_entry), comp_marker_entry);
 
-				markers_ld_it = markers_ld.begin();
-				while (markers_ld_it != markers_ld.end()) {
-					markers_ld_it->second->clear();
-					delete markers_ld_it->second;
+		ld_files = descriptor->get_ld_files();
+		ld_files_it = ld_files->begin();
+		while (ld_files_it != ld_files->end()) {
+			index_ld(*ld_files_it);
+			ld_files_it++;
+		}
 
-					markers_ld_it++;
-				}
-				markers_ld.clear();
-
-				index_ld(ld_file_path);
-
-				independent_markers = new map<const char*, double, bool(*)(const char*, const char*)>(auxiliary::bool_strcmp);
-
-				while (markers->size() > 0) {
-					markers_it = markers->begin();
-					min_pvalue_it = markers_it;
-					while (++markers_it != markers->end()) {
-						if (auxiliary::fcmp(markers_it->second, min_pvalue_it->second, EPSILON) < 0) {
-							min_pvalue_it = markers_it;
-						}
-					}
-
-					independent_markers->insert(pair<const char*, double>(min_pvalue_it->first, min_pvalue_it->second));
-
-					markers_ld_it = markers_ld.find(min_pvalue_it->first);
-
-					markers->erase(min_pvalue_it);
-
-					if (markers_ld_it != markers_ld.end()) {
-						marker_neighbours = markers_ld_it->second;
-						marker_neighbours_it = marker_neighbours->begin();
-						while (marker_neighbours_it != marker_neighbours->end()) {
-							markers_it = markers->find(/*(char*)*/ *marker_neighbours_it);
-							if (markers_it != markers->end()) {
-								markers->erase(markers_it);
-							}
-							marker_neighbours_it++;
-						}
-					}
-				}
-
-				markers_by_chr_it->second = independent_markers;
-
-				delete markers;
-				markers = NULL;
+		sorted_markers_index = 0u;
+		while (markers.size() > 0) {
+			while ((min_pvalue_it = markers.find(sorted_markers[sorted_markers_index].marker)) == markers.end()) {
+				sorted_markers_index++;
 			}
 
-			markers_by_chr_it++;
+			independent_markers.insert(pair<const char*, double>(min_pvalue_it->first, min_pvalue_it->second));
+
+			markers_ld_it = markers_ld.find(min_pvalue_it->first);
+
+			markers.erase(min_pvalue_it);
+
+			if (markers_ld_it != markers_ld.end()) {
+				marker_neighbours = markers_ld_it->second;
+				marker_neighbours_it = marker_neighbours->begin();
+				while (marker_neighbours_it != marker_neighbours->end()) {
+					markers_it = markers.find(/*(char*)*/ *marker_neighbours_it);
+					if (markers_it != markers.end()) {
+						markers.erase(markers_it);
+					}
+					marker_neighbours_it++;
+				}
+			}
 		}
+
+		free(sorted_markers);
+		sorted_markers = NULL;
 	} catch (DescriptorException &e) {
 		throw;
 	}
@@ -731,7 +672,6 @@ void Selector::write_remaining_markers() throw (SelectorException) {
 	int column_position = 0;
 
 	char* marker_token = NULL;
-	char* chr_token = NULL;
 
 	if (gwafile == NULL) {
 		return;
@@ -773,13 +713,10 @@ void Selector::write_remaining_markers() throw (SelectorException) {
 
 			column_position = 0;
 			marker_token = NULL;
-			chr_token = NULL;
 			token = auxiliary::strtok(&line, data_separator);
 			while (token != NULL) {
 				if (column_position == marker_column_pos) {
 					marker_token = token;
-				} else if (column_position == chr_column_pos) {
-					chr_token = token;
 				}
 				token = auxiliary::strtok(&line, data_separator);
 				++column_position;
@@ -791,12 +728,8 @@ void Selector::write_remaining_markers() throw (SelectorException) {
 				throw SelectorException("Selector", "process_data()", __LINE__, 9, line_number, descriptor->get_name(), column_position, total_columns);
 			}
 
-			markers_by_chr_it = markers_by_chr.find(chr_token);
-			if (markers_by_chr_it != markers_by_chr.end()) {
-				markers = markers_by_chr_it->second;
-				if (markers->count(marker_token) > 0) {
-					writer->write("%s\n", line_backup);
-				}
+			if (independent_markers.count(marker_token) > 0) {
+				writer->write("%s\n", line_backup);
 			}
 
 			++line_number;

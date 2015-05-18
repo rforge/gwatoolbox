@@ -1,5 +1,5 @@
 /*
- * Copyright © 2011 Daniel Taliun, Christian Fuchsberger and Cristian Pattaro. All rights reserved.
+ * Copyright ï¿½ 2011 Daniel Taliun, Christian Fuchsberger and Cristian Pattaro. All rights reserved.
  *
  * This file is part of GWAtoolbox.
  *
@@ -299,15 +299,14 @@ SEXP Descriptor2Robj(SEXP external_descriptor_pointer) {
 	}
 
 	if (descriptor->ld_files.size() > 0) {
-		PROTECT(ld_files = allocMatrix(STRSXP, descriptor->ld_files.size(), 2));
+		PROTECT(ld_files = allocVector(STRSXP, descriptor->ld_files.size()));
 
-		descriptor->map_char_it = descriptor->ld_files.begin();
+		descriptor->set_char_it = descriptor->ld_files.begin();
 		i = 0;
-		while (descriptor->map_char_it != descriptor->ld_files.end()) {
-			SET_STRING_ELT(ld_files, i, mkChar(descriptor->map_char_it->first));
-			SET_STRING_ELT(ld_files, i + descriptor->ld_files.size(), mkChar(descriptor->map_char_it->second));
+		while (descriptor->set_char_it != descriptor->ld_files.end()) {
+			SET_STRING_ELT(ld_files, i, mkChar(*(descriptor->set_char_it)));
 			i += 1;
-			descriptor->map_char_it++;
+			descriptor->set_char_it++;
 		}
 
 		UNPROTECT(1);
@@ -525,16 +524,26 @@ SEXP Robj2Descriptor(SEXP descriptor_Robj) {
 			} else if (strcmp(value, "ld_files") == 0) {
 				ld_files = VECTOR_ELT(descriptor_Robj, i);
 				if (ld_files != R_NilValue) {
-					if (!isMatrix(ld_files)) {
+					if (!isString(ld_files)) {
 						error("\nMismatch in Descriptor class structure on line %d.", __LINE__);
 					}
-					if ((ncol = length(ld_files)) % 2 != 0) {
-						error("\nMismatch in Descriptor class structure on line %d.", __LINE__);
-					}
-					for (int j = 0; j < ncol / 2; j++) {
-						descriptor->add_ld_file(CHAR(STRING_ELT(ld_files, j)), CHAR(STRING_ELT(ld_files, j + ncol / 2)));
+					for (int j = 0; j < length(ld_files); j++) {
+						descriptor->add_ld_file(CHAR(STRING_ELT(ld_files, j)));
 					}
 				}
+
+//				ld_files = VECTOR_ELT(descriptor_Robj, i);
+//				if (ld_files != R_NilValue) {
+//					if (!isMatrix(ld_files)) {
+//						error("\nMismatch in Descriptor class structure on line %d.", __LINE__);
+//					}
+//					if ((ncol = length(ld_files)) % 2 != 0) {
+//						error("\nMismatch in Descriptor class structure on line %d.", __LINE__);
+//					}
+//					for (int j = 0; j < ncol / 2; j++) {
+//						descriptor->add_ld_file(CHAR(STRING_ELT(ld_files, j)), CHAR(STRING_ELT(ld_files, j + ncol / 2)));
+//					}
+//				}
 			}
 		}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2011 Daniel Taliun, Christian Fuchsberger and Cristian Pattaro. All rights reserved.
+ * Copyright ï¿½ 2011 Daniel Taliun, Christian Fuchsberger and Cristian Pattaro. All rights reserved.
  *
  * This file is part of GWAtoolbox.
  *
@@ -62,10 +62,11 @@ private:
 	map<const char* const, vector<double>*, bool(*)(const char*, const char*)> thresholds;
 	map<const char* const, char*, bool(*)(const char*, const char*)> renamed_columns;
 	vector<const char*> reordered_columns;
-	map<const char* const, char*, bool(*)(const char*, const char*)> ld_files;
+	set<const char*, bool(*)(const char*, const char*)> ld_files;
 
 	map<const char* const, char*, bool(*)(const char*, const char*)>::iterator map_char_it;
 	map<const char* const, vector<double>*, bool(*)(const char*, const char*)>::iterator map_vect_it;
+	set<const char*, bool(*)(const char*, const char*)>::iterator set_char_it;
 	vector<double>::iterator vector_double_it;
 	vector<const char*>::iterator vector_char_it;
 
@@ -77,12 +78,14 @@ private:
 
 	void add(map<const char* const, vector<double>*, bool(*)(const char*, const char*)>& map, const char* key, double value) throw (DescriptorException);
 	void add(map<const char* const, char*, bool(*)(const char*, const char*)>& map, const char* key, const char *value) throw (DescriptorException);
+	void add(set<const char*, bool(*)(const char*, const char*)>& set, const char *value) throw (DescriptorException);
 
 	bool remove(map<const char* const, vector<double>*, bool(*)(const char*, const char*)>& map, const char* key) throw (DescriptorException);
 	bool remove(map<const char* const, char*, bool(*)(const char*, const char*)>& map, const char* key) throw (DescriptorException);
 
 	void copy(map<const char* const, vector<double>*, bool(*)(const char*, const char*)>& map_to, map<const char* const, vector<double>*, bool(*)(const char*, const char*)>& map_from) throw (DescriptorException);
 	void copy(map<const char* const, char*, bool(*)(const char*, const char*)>& map_to, map<const char* const, char*, bool(*)(const char*, const char*)>& map_from) throw (DescriptorException);
+	void copy(set<const char*, bool(*)(const char*, const char*)>& set_to, set<const char*, bool(*)(const char*, const char*)>& set_from) throw (DescriptorException);
 	void copy(vector<const char*>& vector_to, vector<const char*> vector_from) throw (DescriptorException);
 
 	Descriptor();
@@ -183,7 +186,6 @@ public:
 	const char* get_renamed_column(const char* name) throw (DescriptorException);
 	int get_column_order(const char* name, bool case_sensitive) throw (DescriptorException);
 	vector<const char*>* get_reordered_columns();
-	const char* get_ld_file(const char* name) throw (DescriptorException);
 	vector<const char*>* get_ld_files();
 	int get_columns_number();
 	int get_properties_number();
@@ -202,7 +204,7 @@ public:
 	void add_threshold(const char* name, const char* numeric_value) throw (DescriptorException);
 	void add_renamed_column(const char* name, const char* new_name) throw (DescriptorException);
 	void add_reordered_column(const char* name) throw (DescriptorException);
-	void add_ld_file(const char* name, const char* path) throw (DescriptorException);
+	void add_ld_file(const char* path) throw (DescriptorException);
 
 	bool remove_column(const char* common_name) throw (DescriptorException);
 	bool remove_property(const char* name) throw (DescriptorException);

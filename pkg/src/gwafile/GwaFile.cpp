@@ -1,5 +1,5 @@
 /*
- * Copyright © 2011 Daniel Taliun, Christian Fuchsberger and Cristian Pattaro. All rights reserved.
+ * Copyright ï¿½ 2011 Daniel Taliun, Christian Fuchsberger and Cristian Pattaro. All rights reserved.
  *
  * This file is part of GWAtoolbox.
  *
@@ -620,9 +620,8 @@ void GwaFile::check_ld_files(Descriptor* descriptor) throw (GwaFileException) {
 
 void GwaFile::check_ld_files_separators(Descriptor* descriptor) throw (GwaFileException) {
 	const char* separator_name = NULL;
-	vector<const char*>* names = NULL;
-	vector<const char*>::iterator names_it;
-	const char* path = NULL;
+	vector<const char*>* files = NULL;
+	vector<const char*>::iterator files_it;
 	Reader* reader = NULL;
 
 	char ld_file_header_separator = '\0';
@@ -634,38 +633,37 @@ void GwaFile::check_ld_files_separators(Descriptor* descriptor) throw (GwaFileEx
 
 	try {
 		if ((separator_name = descriptor->get_property(Descriptor::LD_FILE_SEPARATOR)) == NULL) {
-			names = descriptor->get_ld_files();
-			if ((names == NULL) || (names->size() <= 0)) {
+			files = descriptor->get_ld_files();
+			if ((files == NULL) || (files->size() <= 0)) {
 				throw GwaFileException("GwaFile", "check_ld_files_separators( Descriptor* )", __LINE__, 14, Descriptor::LD_FILE, descriptor->get_full_path());
 			}
 
-			names_it = names->begin();
+			files_it = files->begin();
 
-			reader = ReaderFactory::create(descriptor->get_ld_file(*names_it));
+			reader = ReaderFactory::create(*files_it);
 			reader->detect_field_separators(&(this->ld_file_header_separator), &(this->ld_file_data_separator));
 			reader->close();
 			delete reader;
 			reader = NULL;
 
-			names_it++;
+			files_it++;
 
-			while (names_it != names->end()) {
-				path = descriptor->get_ld_file(*names_it);
-				reader = ReaderFactory::create(path);
+			while (files_it != files->end()) {
+				reader = ReaderFactory::create(*files_it);
 				reader->detect_field_separators(&ld_file_header_separator, &ld_file_data_separator);
 				reader->close();
 				delete reader;
 				reader = NULL;
 
 				if ((ld_file_header_separator != this->ld_file_header_separator) || (ld_file_data_separator != this->ld_file_data_separator)) {
-					throw GwaFileException("GwaFile", "check_ld_files_separators( Descriptor* )", __LINE__, 15, path, Descriptor::LD_FILE, descriptor->get_full_path());
+					throw GwaFileException("GwaFile", "check_ld_files_separators( Descriptor* )", __LINE__, 15, *files_it, Descriptor::LD_FILE, descriptor->get_full_path());
 				}
 
-				names_it++;
+				files_it++;
 			}
 
-			delete names;
-			names = NULL;
+			delete files;
+			files = NULL;
 		} else if ((strcmp_ignore_case(separator_name, Descriptor::COMMA) == 0) ||
 				(strcmp_ignore_case(separator_name, Descriptor::COMMAS) == 0)) {
 			this->ld_file_header_separator = ',';

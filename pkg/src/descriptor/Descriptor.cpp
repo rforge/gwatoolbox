@@ -183,9 +183,8 @@ Descriptor::~Descriptor() {
 		free((char*)*vector_char_it);
 	}
 
-	for (map_char_it = ld_files.begin(); map_char_it != ld_files.end(); map_char_it++) {
-		free((char*)map_char_it->first);
-		free(map_char_it->second);
+	for (set_char_it = ld_files.begin(); set_char_it != ld_files.end(); set_char_it++) {
+		free((char*)*set_char_it);
 	}
 
 	columns.clear();
@@ -400,6 +399,31 @@ void Descriptor::add(map<const char* const, char*, bool(*)(const char*, const ch
 	}
 }
 
+void Descriptor::add(set<const char*, bool(*)(const char*, const char*)>& set, const char* value) throw (DescriptorException) {
+	if (value == NULL) {
+		throw DescriptorException("Descriptor", "add( set<char*>&, const char* value )", __LINE__, 0, "value");
+	}
+
+	if (strlen(value) <= 0) {
+		throw DescriptorException("Descriptor", "add( set<har*>&, const char* value )", __LINE__, 1, "value");
+	}
+
+	set_char_it = set.find(value);
+	if (set_char_it != set.end()) {
+		return;
+	}
+
+	char* value_copy = NULL;
+
+	value_copy = (char*)malloc((strlen(value) + 1) * sizeof(char));
+	if (value_copy == NULL) {
+		throw DescriptorException("Descriptor", "add( set<char*>&, const char* value )", __LINE__, 2, (strlen(value) + 1) * sizeof(char));
+	}
+	strcpy(value_copy, value);
+
+	set.insert(value_copy);
+}
+
 bool Descriptor::remove(map<const char* const, vector<double>*, bool(*)(const char*, const char*)>& map, const char* key) throw (DescriptorException) {
 	if (key == NULL) {
 		throw DescriptorException("Descriptor", "bool remove( map<const char* const, vector<double>*>&, const char* )", __LINE__, 0, "key");
@@ -482,6 +506,21 @@ void Descriptor::copy(map<const char* const, char*, bool(*)(const char*, const c
 		strcpy(value_copy, map_char_it->second);
 
 		map_to.insert(pair<const char* const, char*>(key_copy, value_copy));
+	}
+}
+
+void Descriptor::copy(set<const char*, bool(*)(const char*, const char*)>& set_to, set<const char*, bool(*)(const char*, const char*)>& set_from) throw (DescriptorException) {
+	char* value_copy = NULL;
+
+	for (set_char_it = set_from.begin(); set_char_it != set_from.end(); set_char_it++) {
+		value_copy = (char*)malloc((strlen(*set_char_it) + 1) * sizeof(char));
+		if (value_copy == NULL) {
+			free(value_copy);
+			throw DescriptorException("Descriptor", "copy( set<char*>&, map<char*>& )", __LINE__, 2, (strlen(*set_char_it) + 1) * sizeof(char));
+		}
+		strcpy(value_copy, *set_char_it);
+
+		set_to.insert(value_copy);
 	}
 }
 
@@ -676,22 +715,13 @@ int Descriptor::get_reordered_columns_number() {
 vector<const char*>* Descriptor::get_ld_files() {
 	vector<const char*>* ld_files = new vector<const char*>();
 
-	map_char_it = this->ld_files.begin();
-	while (map_char_it != this->ld_files.end()) {
-		ld_files->push_back(map_char_it->first);
-		map_char_it++;
+	set_char_it = this->ld_files.begin();
+	while (set_char_it != this->ld_files.end()) {
+		ld_files->push_back(*set_char_it);
+		set_char_it++;
 	}
 
 	return ld_files;
-}
-
-const char* Descriptor::get_ld_file(const char* value) throw (DescriptorException) {
-	try {
-		return get(ld_files, value);
-	} catch (DescriptorException &e) {
-		e.add_message("Descriptor", "const char* get_ld_files( const char* )", __LINE__, 22);
-		throw;
-	}
 }
 
 int Descriptor::get_ld_files_number() {
@@ -824,14 +854,24 @@ void Descriptor::add_reordered_column(const char* name) throw (DescriptorExcepti
 	}
 }
 
-void Descriptor::add_ld_file(const char* name, const char* path) throw (DescriptorException) {
+//void Descriptor::add_ld_file(const char* name, const char* path) throw (DescriptorException) {
+//	try {
+//		add(ld_files, name, path);
+//	} catch (DescriptorException &e) {
+//		e.add_message("Descriptor", "add_ld_file( const char*, const char* )", __LINE__, 20);
+//		throw;
+//	}
+//}
+
+void Descriptor::add_ld_file(const char* path) throw (DescriptorException) {
 	try {
-		add(ld_files, name, path);
+		add(ld_files, path);
 	} catch (DescriptorException &e) {
 		e.add_message("Descriptor", "add_ld_file( const char*, const char* )", __LINE__, 20);
 		throw;
 	}
 }
+
 
 bool Descriptor::remove_column(const char* common_name) throw (DescriptorException) {
 	try {
@@ -877,14 +917,14 @@ void Descriptor::remove_reordered_columns() {
 	reordered_columns.clear();
 }
 
-bool Descriptor::remove_ld_file(const char* name) throw (DescriptorException) {
-	try {
-		return remove(ld_files, name);
-	} catch (DescriptorException &e) {
-		e.add_message("Descriptor", "bool remove_new_column_name( const char* )", __LINE__, 21);
-		throw;
-	}
-}
+//bool Descriptor::remove_ld_file(const char* name) throw (DescriptorException) {
+//	try {
+//		return remove(ld_files, name);
+//	} catch (DescriptorException &e) {
+//		e.add_message("Descriptor", "bool remove_new_column_name( const char* )", __LINE__, 21);
+//		throw;
+//	}
+//}
 
 vector<Descriptor*>* Descriptor::process_instructions(const char* script_name, char path_separator) throw (DescriptorException) {
 	list<char*> tokens;
@@ -1298,11 +1338,14 @@ vector<Descriptor*>* Descriptor::process_instructions(const char* script_name, c
 						default_descriptor.add_property(MAP_POSITION, tokens.front());
 					}
 				} else if (strcmp(token, LD_FILE) == 0) {
-					if (tokens.size() >= 2) {
-						token = tokens.front();
-						tokens.pop_front();
-						default_descriptor.add_ld_file(token, tokens.front());
+					if (!tokens.empty()) {
+						default_descriptor.add_ld_file(tokens.front());
 					}
+					//if (tokens.size() >= 2) {
+					//	token = tokens.front();
+					//	tokens.pop_front();
+					//	default_descriptor.add_ld_file(token, tokens.front());
+					//}
 				} else if (strcmp(token, LD_FILE_SEPARATOR) == 0) {
 					if (!tokens.empty()) {
 						if ((strcmp_ignore_case(tokens.front(), COMMA) == 0) ||

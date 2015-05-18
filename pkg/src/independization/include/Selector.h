@@ -1,5 +1,5 @@
 /*
- * Copyright © 2012 Daniel Taliun, Christian Fuchsberger and Cristian Pattaro. All rights reserved.
+ * Copyright ï¿½ 2012 Daniel Taliun, Christian Fuchsberger and Cristian Pattaro. All rights reserved.
  *
  * This file is part of GWAtoolbox.
  *
@@ -32,6 +32,11 @@ using namespace std;
 
 class Selector {
 private:
+	struct marker_entry {
+		const char* marker;
+		double pvalue;
+	};
+
 	GwaFile* gwafile;
 
 	Reader* reader;
@@ -39,11 +44,8 @@ private:
 	Reader* ld_reader;
 	const char* ld_file_path;
 
-//	char* header_backup;
-
 	int total_columns;
 	int marker_column_pos;
-	int chr_column_pos;
 	int pvalue_column_pos;
 
 	int ld_total_columns;
@@ -54,13 +56,14 @@ private:
 	vector<char*> all_marker_names;
 	vector<char*>::iterator all_marker_names_it;
 
-	map<char*, map<const char*, double, bool(*)(const char*, const char*)>*, bool(*)(const char*, const char*)> markers_by_chr;
-	map<char*, map<const char*, double, bool(*)(const char*, const char*)>*, bool(*)(const char*, const char*)>::iterator markers_by_chr_it;
-	map<const char*, double, bool(*)(const char*, const char*)>* markers;
+	map<const char*, double, bool(*)(const char*, const char*)> markers;
+	map<const char*, double, bool(*)(const char*, const char*)> independent_markers;
 	map<const char*, double, bool(*)(const char*, const char*)>::iterator markers_it;
 
 	map<const char*, vector<const char*>*> markers_ld;
 	map<const char*, vector<const char*>*>::iterator markers_ld_it;
+
+	static int comp_marker_entry(const void* first, const void* second);
 
 	void open_ld_file(const char* file_path) throw (SelectorException);
 	void close_ld_file() throw (SelectorException);
